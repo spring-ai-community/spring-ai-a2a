@@ -119,6 +119,7 @@ public class A2AAutoConfiguration {
 			.defaultInputModes(agentProps.getDefaultInputModes())
 			.defaultOutputModes(agentProps.getDefaultOutputModes())
 			.supportedInterfaces(List.of(new AgentInterface("JSONRPC", agentUrl)))
+			.skills(List.of()) // Empty skills list by default
 			.build();
 	}
 
