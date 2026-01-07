@@ -13,7 +13,75 @@ The A2A protocol is an open standard that enables AI agents to communicate and c
 
 ## Quick Start
 
-### 1. Add Dependencies
+This library supports two use cases:
+1. **Building A2A Agent Servers** - Expose your Spring AI agent via A2A protocol endpoints
+2. **Calling Remote A2A Agents** - Connect to and communicate with other A2A agents
+
+Choose the approach that fits your needs:
+
+### Option A: Building an A2A Agent Server (Recommended - Using Spring Boot Starter)
+
+The easiest way to build an A2A agent server is using the Spring Boot Starter:
+
+#### 1. Add the Starter Dependency
+
+```xml
+<dependency>
+    <groupId>org.springaicommunity</groupId>
+    <artifactId>spring-boot-starter-spring-ai-a2a</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+</dependency>
+```
+
+#### 2. Configure Your Agent
+
+Add to your `application.yml`:
+
+```yaml
+spring:
+  ai:
+    a2a:
+      agent:
+        name: Weather Agent
+        description: Provides weather information for any location
+```
+
+#### 3. Implement Your Agent Logic
+
+```java
+@Component
+public class WeatherAgentExecutor extends DefaultSpringAIAgentExecutor {
+
+    public WeatherAgentExecutor(ChatClient chatClient) {
+        super(chatClient);
+    }
+
+    @Override
+    public String getSystemPrompt() {
+        return "You are a helpful weather assistant.";
+    }
+
+    @Override
+    public List<Part<?>> onExecute(String userInput, RequestContext context, TaskUpdater taskUpdater) {
+        String response = getChatClient().prompt()
+            .system(getSystemPrompt())
+            .user(userInput)
+            .call()
+            .content();
+        return List.of(new TextPart(response));
+    }
+}
+```
+
+That's it! Your agent is now available at `http://localhost:8080/a2a` with automatic configuration.
+
+See the [Spring Boot Starter README](spring-boot-starter-spring-ai-a2a/README.md) for more configuration options.
+
+### Option B: Building an A2A Agent Server (Manual Configuration)
+
+If you need more control, you can manually configure your agent:
+
+#### 1. Add Dependencies
 
 ```xml
 <dependency>
@@ -28,7 +96,7 @@ The A2A protocol is an open standard that enables AI agents to communicate and c
 </dependency>
 ```
 
-### 2. Create an A2A Agent
+#### 2. Create an A2A Agent
 
 ```java
 @Configuration
@@ -67,7 +135,21 @@ public class WeatherAgentConfig {
 
 That's it! Your agent is now available at `http://localhost:8080/a2a`
 
-### 4. Call Other Agents
+### Option C: Calling Remote A2A Agents (Client-Only Applications)
+
+If you only need to **call** other A2A agents (not expose your own), you only need the core dependency:
+
+#### 1. Add Core Dependency
+
+```xml
+<dependency>
+    <groupId>org.springaicommunity</groupId>
+    <artifactId>spring-ai-a2a-core</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+</dependency>
+```
+
+#### 2. Create and Use A2A Clients
 
 ```java
 @Service
@@ -92,21 +174,37 @@ public class MyService {
 }
 ```
 
+## When to Use What
+
+| Your Use Case | Dependency | Description |
+|--------------|------------|-------------|
+| **Building an A2A agent server** | `spring-boot-starter-spring-ai-a2a` | Use the Spring Boot Starter for auto-configuration |
+| **Building a server with manual config** | `spring-ai-a2a-core` + `spring-ai-a2a-server` | For advanced scenarios requiring custom configuration |
+| **Only calling other agents (client)** | `spring-ai-a2a-core` | Create `DefaultA2AAgentClient` instances programmatically |
+| **Agent orchestration (server + client)** | `spring-boot-starter-spring-ai-a2a` | Use starter for server, create clients programmatically |
+
 ## Module Structure
 
 ```
 spring-ai-a2a/
-├── spring-ai-a2a-core/              # Core interfaces and domain models
-│   ├── A2AAgent interface
-│   └── A2ARequest and A2AResponse
+├── spring-ai-a2a-core/                    # Core interfaces and domain models
+│   ├── A2AAgent interface                 # Base interface for agents
+│   ├── A2AAgentClient interface           # Client for calling remote agents
+│   ├── DefaultA2AAgentClient              # Client implementation
+│   └── A2ARequest and A2AResponse         # Request/response models
 │
-├── spring-ai-a2a-server/            # Server-side support
-│   ├── AgentExecutorLifecycle interface
-│   ├── DefaultSpringAIAgentExecutor base class
-│   └── DefaultA2AAgentServer
+├── spring-ai-a2a-server/                  # Server-side support
+│   ├── AgentExecutorLifecycle interface   # Simplified lifecycle hooks
+│   ├── SpringAIAgentExecutor interface    # Spring AI adapter
+│   ├── DefaultSpringAIAgentExecutor       # Base implementation
+│   └── DefaultA2AAgentServer              # Server implementation
 │
-└── spring-ai-a2a-examples/          # Examples
-    └── airbnb-planner-multiagent/   # Multi-agent example
+├── spring-boot-starter-spring-ai-a2a/     # Spring Boot Starter
+│   ├── A2AAutoConfiguration               # Auto-configuration
+│   └── A2AProperties                      # Configuration properties
+│
+└── spring-ai-a2a-examples/                # Examples
+    └── airbnb-planner-multiagent/         # Multi-agent orchestration example
 ```
 
 ## Core Concepts

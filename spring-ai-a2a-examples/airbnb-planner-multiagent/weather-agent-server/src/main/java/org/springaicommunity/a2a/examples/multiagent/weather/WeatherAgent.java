@@ -16,14 +16,6 @@
 
 package org.springaicommunity.a2a.examples.multiagent.weather;
 
-import java.util.List;
-
-import io.a2a.server.agentexecution.AgentExecutor;
-import io.a2a.spec.AgentCapabilities;
-import io.a2a.spec.AgentCard;
-import io.a2a.spec.AgentInterface;
-import io.a2a.spec.AgentSkill;
-
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.model.ApiKey;
 import org.springframework.ai.model.SimpleApiKey;
@@ -31,34 +23,30 @@ import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.util.StringUtils;
-import org.springaicommunity.a2a.server.A2AAgentServer;
-import org.springaicommunity.a2a.server.DefaultA2AAgentServer;
 import org.springaicommunity.a2a.server.agentexecution.SpringAIAgentExecutor;
 
 /**
  * Weather Agent Server Application.
  *
  * <p>
- * This application demonstrates how to create an A2A agent server using Spring AI:
+ * This application demonstrates how to create an A2A agent server using the Spring Boot Starter:
  * <ul>
- * <li>Uses {@link org.springframework.ai.a2a.server.agentexecution.SpringAIAgentExecutor}
- * to wrap a custom {@link io.a2a.server.agentexecution.AgentExecutor}</li>
- * <li>Creates an {@link AgentCard} programmatically</li>
+ * <li>Uses Spring Boot auto-configuration via {@code spring-boot-starter-spring-ai-a2a}</li>
+ * <li>Agent card configured via {@code application.properties}</li>
+ * <li>Implements {@link SpringAIAgentExecutor} to provide agent logic</li>
  * <li>Integrates with Spring AI {@link ChatClient} for LLM capabilities</li>
- * <li>Exposes A2A endpoints for agent-to-agent communication</li>
+ * <li>A2A endpoints automatically exposed at {@code /a2a}</li>
  * </ul>
  *
  * <p>
  * Environment variables required:
  * <ul>
  * <li>OPENAI_API_KEY - Your OpenAI API key</li>
- * <li>SERVER_PORT (optional) - Server port, defaults to 10001</li>
  * </ul>
  *
  * @author Ilayaperumal Gopinathan
@@ -72,66 +60,16 @@ public class WeatherAgent {
 	}
 
 	/**
-	 * Create the AgentExecutor bean.
+	 * Create the SpringAIAgentExecutor bean.
 	 * <p>
-	 * The WeatherAgentExecutor extends DefaultSpringAIAgentExecutor which implements
-	 * SpringAIAgentExecutor (combining AgentExecutor and AgentExecutorLifecycle),
-	 * providing simplified lifecycle hooks for Spring AI agents.
+	 * The Spring Boot Starter will automatically detect this bean and create the A2AAgentServer.
+	 * The AgentCard configuration is loaded from application.properties.
 	 * @param chatClient the ChatClient for LLM interactions
-	 * @return the AgentExecutor
+	 * @return the SpringAIAgentExecutor
 	 */
 	@Bean
-	public AgentExecutor agentExecutor(@Autowired(required = false) ChatClient chatClient) {
+	public SpringAIAgentExecutor agentExecutor(@Autowired(required = false) ChatClient chatClient) {
 		return new WeatherAgentExecutor(chatClient);
-	}
-
-	/**
-	 * Create the AgentCard bean.
-	 * <p>
-	 * The AgentCard describes the agent's capabilities and supported interfaces.
-	 * @param serverPort the server port
-	 * @return the AgentCard
-	 */
-	@Bean
-	public AgentCard agentCard(@Value("${server.port:10001}") int serverPort) {
-		String agentUrl = "http://localhost:" + serverPort + "/a2a";
-		return AgentCard.builder()
-			.name("Weather Agent")
-			.description("Provides weather information for any location and date")
-			.version("1.0.0")
-			.protocolVersion("0.1.0")
-			.capabilities(AgentCapabilities.builder()
-				.streaming(false)
-				.pushNotifications(false)
-				.stateTransitionHistory(false)
-				.build())
-			.defaultInputModes(List.of("text"))
-			.defaultOutputModes(List.of("text"))
-			.supportedInterfaces(List.of(new AgentInterface("JSONRPC", agentUrl)))
-			.skills(List.of(AgentSkill.builder()
-				.id("weather-info")
-				.name("Get Weather Information")
-				.description("Provides current weather conditions, forecast, temperature, humidity, and wind speed")
-				.tags(List.of("weather", "forecast", "temperature"))
-				.build()))
-			.build();
-	}
-
-	/**
-	 * Create the A2A Agent Server bean.
-	 * <p>
-	 * This exposes the A2A protocol endpoints for agent-to-agent communication.
-	 * @param agentCard the agent card
-	 * @param agentExecutor the agent executor
-	 * @return the A2A agent server
-	 */
-	@Bean
-	public A2AAgentServer a2aAgentServer(AgentCard agentCard, AgentExecutor agentExecutor) {
-		// Cast AgentExecutor to SpringAIAgentExecutor
-		if (agentExecutor instanceof SpringAIAgentExecutor springAIAgentExecutor) {
-			return new DefaultA2AAgentServer(agentCard, springAIAgentExecutor);
-		}
-		throw new IllegalArgumentException("AgentExecutor must implement SpringAIAgentExecutor");
 	}
 
 	/**

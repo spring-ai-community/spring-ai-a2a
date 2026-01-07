@@ -16,16 +16,10 @@
 	<description>Airbnb accommodation search agent for multi-agent planner example</description>
 
 	<dependencies>
-		<!-- Spring AI A2A Core -->
+		<!-- Spring Boot Starter for Spring AI A2A (includes core and server) -->
 		<dependency>
 			<groupId>org.springaicommunity</groupId>
-			<artifactId>spring-ai-a2a-core</artifactId>
-		</dependency>
-
-		<!-- Spring AI A2A Server -->
-		<dependency>
-			<groupId>org.springaicommunity</groupId>
-			<artifactId>spring-ai-a2a-server</artifactId>
+			<artifactId>spring-boot-starter-spring-ai-a2a</artifactId>
 		</dependency>
 
 		<!-- Spring AI OpenAI (for ChatClient) -->
