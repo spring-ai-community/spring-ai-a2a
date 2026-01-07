@@ -26,7 +26,7 @@ Spring AI's A2A implementation enables building multi-agent systems where AI age
             │     Spring Boot Application (Port 8080)        │
             │                                                │
             │  ┌──────────────────────────────────────────┐ │
-            │  │      A2AAgentRegistry                    │ │
+            │  │      A2AEndpointRegistry                    │ │
             │  │  - Discovers agent capabilities          │ │
             │  │  - Maintains agent connections           │ │
             │  │  - Manages AgentCards                    │ │
@@ -48,7 +48,7 @@ Spring AI's A2A implementation enables building multi-agent systems where AI age
       │   Port: 10001          │  │   Port: 10002         │
       │                        │  │                       │
       │ ┌────────────────────┐ │  │ ┌───────────────────┐│
-      │ │ DefaultA2AAgent    │ │  │ │ DefaultA2AAgent   ││
+      │ │ DefaultA2AEndpoint    │ │  │ │ DefaultA2AEndpoint   ││
       │ │ Server             │ │  │ │ Server            ││
       │ │ - Exposes /a2a     │ │  │ │ - Exposes /a2a    ││
       │ │ - Returns AgentCard│ │  │ │ - Returns AgentCard││
@@ -111,7 +111,7 @@ Step 3: Parallel Agent Calls via A2A Protocol
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ┌─────────────────────┐                        ┌─────────────────────┐
-│  A2AAgentClient     │                        │  A2AAgentClient     │
+│  A2AClient     │                        │  A2AClient     │
 │  (Weather Agent)    │                        │  (Airbnb Agent)     │
 └──────────┬──────────┘                        └──────────┬──────────┘
            │                                              │
@@ -135,7 +135,7 @@ Step 3: Parallel Agent Calls via A2A Protocol
 │  Weather Agent       │                      │  Airbnb Agent        │
 │  (Port 10001)        │                      │  (Port 10002)        │
 │                      │                      │                      │
-│  DefaultA2AAgent     │                      │  DefaultA2AAgent     │
+│  DefaultA2AEndpoint     │                      │  DefaultA2AEndpoint     │
 │  Server              │                      │  Server              │
 │  ↓                   │                      │  ↓                   │
 │  handleJsonRpc       │                      │  handleJsonRpc       │
@@ -252,7 +252,7 @@ Step 7: Final Response
 
 1. Host Agent Startup
    │
-   ├─→ A2AAgentRegistry.registerAgent("weather", "http://localhost:10001/a2a")
+   ├─→ A2AEndpointRegistry.registerAgent("weather", "http://localhost:10001/a2a")
    │
    ├─→ GET http://localhost:10001/a2a
    │   (Fetch AgentCard)
@@ -283,8 +283,8 @@ Step 7: Final Response
    │     }
    │   }
    │
-   └─→ Create A2AAgentClient instance
-       Store in registry as A2AAgent interface
+   └─→ Create A2AClient instance
+       Store in registry as A2AEndpoint interface
 ```
 
 ### Message Exchange Flow
@@ -296,7 +296,7 @@ Step 7: Final Response
 
 Client Side (Host Agent)
 ────────────────────────
-A2AAgent weatherAgent = registry.getAgent("weather");
+A2AEndpoint weatherAgent = registry.getAgent("weather");
 A2ARequest request = A2ARequest.of("What's the weather in LA?");
 A2AResponse response = weatherAgent.sendMessage(request);
 
@@ -324,7 +324,7 @@ Content-Type: application/json
 
 Server Side (Weather Agent)
 ────────────────────────────
-DefaultA2AAgentServer.handleJsonRpcRequest()
+DefaultA2AServer.handleJsonRpcRequest()
   ↓
 handleSendMessage()
   ↓
@@ -377,7 +377,7 @@ A2AResponse {
 └──────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ A2AAgent Interface                                                      │
+│ A2AEndpoint Interface                                                      │
 │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
 │ • Unified abstraction for both local and remote agents                 │
 │ • Methods:                                                              │
@@ -387,28 +387,28 @@ A2AResponse {
 │   - supportsStreaming() → boolean                                       │
 │                                                                         │
 │ Implementations:                                                        │
-│ • DefaultA2AAgentClient (remote agents via HTTP)                        │
-│ • DefaultA2AAgentServer (local agents, exposes HTTP endpoints)          │
+│ • DefaultA2AClient (remote agents via HTTP)                        │
+│ • DefaultA2AServer (local agents, exposes HTTP endpoints)          │
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ DefaultA2AAgentClient                                                   │
+│ DefaultA2AClient                                                   │
 │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
-│ • Client-side implementation of A2AAgent                                │
+│ • Client-side implementation of A2AEndpoint                                │
 │ • Uses a2a-java SDK Client for transport                               │
 │ • Supports both sync and streaming calls                               │
 │ • Builder pattern for configuration                                    │
 │                                                                         │
 │ Example:                                                                │
-│   A2AAgent agent = DefaultA2AAgentClient.builder()                      │
+│   A2AEndpoint agent = DefaultA2AClient.builder()                      │
 │       .agentUrl("http://localhost:10001/a2a")                           │
 │       .build();                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ DefaultA2AAgentServer                                                   │
+│ DefaultA2AServer                                                   │
 │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
-│ • Server-side implementation of A2AAgent                                │
+│ • Server-side implementation of A2AEndpoint                                │
 │ • @RestController exposing A2A protocol endpoints                      │
 │ • Handles JSON-RPC requests (sendMessage, submitTask, getTask)         │
 │ • Delegates execution to AgentExecutor                                  │
@@ -457,17 +457,17 @@ A2AResponse {
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ A2AAgentRegistry                                                        │
+│ A2AEndpointRegistry                                                        │
 │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
 │ • Centralized management of A2A agents                                  │
 │ • Discovers and caches AgentCards                                       │
-│ • Creates DefaultA2AAgentClient instances                               │
+│ • Creates DefaultA2AClient instances                               │
 │ • Provides lookup by name or skill tags                                │
 │                                                                         │
 │ Example:                                                                │
-│   A2AAgentRegistry registry = new A2AAgentRegistry();                   │
+│   A2AEndpointRegistry registry = new A2AEndpointRegistry();                   │
 │   registry.registerAgent("weather", "http://localhost:10001/a2a");      │
-│   A2AAgent agent = registry.getAgent("weather");                        │
+│   A2AEndpoint agent = registry.getAgent("weather");                        │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -587,12 +587,12 @@ A complete multi-agent travel planning system demonstrating:
 
 ## Key Concepts
 
-### 1. A2AAgent Interface
+### 1. A2AEndpoint Interface
 
 The core abstraction representing both local and remote agents:
 
 ```java
-public interface A2AAgent {
+public interface A2AEndpoint {
     AgentCard getAgentCard();
     A2AResponse sendMessage(A2ARequest request);
     Flux<A2AResponse> sendMessageStreaming(A2ARequest request);
@@ -635,20 +635,20 @@ public class MyAgentExecutor extends DefaultSpringAIAgentExecutor {
 
 ### 3. Agent Registration
 
-Use `A2AAgentRegistry` to discover and manage agents:
+Use `A2AEndpointRegistry` to discover and manage agents:
 
 ```java
-A2AAgentRegistry registry = new A2AAgentRegistry();
+A2AEndpointRegistry registry = new A2AEndpointRegistry();
 
 // Register remote agents
 registry.registerAgent("weather", "http://localhost:10001/a2a");
 registry.registerAgent("airbnb", "http://localhost:10002/a2a");
 
 // Get agent by name
-A2AAgent weatherAgent = registry.getAgent("weather");
+A2AEndpoint weatherAgent = registry.getAgent("weather");
 
 // Find agents by skill tags
-List<A2AAgent> analysisAgents = registry.findBySkillTags("analysis");
+List<A2AEndpoint> analysisAgents = registry.findBySkillTags("analysis");
 ```
 
 ### 4. ChatClient Integration
@@ -657,7 +657,7 @@ Seamlessly integrate A2A agents with Spring AI's ChatClient:
 
 ```java
 // Direct agent usage is recommended
-A2AAgent agent = DefaultA2AAgentClient.builder()
+A2AEndpoint agent = DefaultA2AClient.builder()
     .agentUrl("http://localhost:10001/a2a")
     .build();
 
@@ -671,10 +671,10 @@ A2AResponse response = agent.sendMessage(A2ARequest.of("What's the weather?"));
 | Aspect | Spring AI (Java) | Python A2A Samples |
 |--------|------------------|-------------------|
 | **Base Classes** | `DefaultSpringAIAgentExecutor` | Direct `AgentExecutor` implementation |
-| **Agent Interface** | Unified `A2AAgent` for local and remote; `SpringAIAgentExecutor` interface for agent executors | Separate client and server abstractions |
+| **Agent Interface** | Unified `A2AEndpoint` for local and remote; `SpringAIAgentExecutor` interface for agent executors | Separate client and server abstractions |
 | **LLM Integration** | Spring AI `ChatClient` | LangChain, LangGraph, Google GenAI |
 | **Lifecycle** | `AgentExecutorLifecycle` with hooks | Direct SDK `AgentExecutor` interface |
-| **Discovery** | `A2AAgentRegistry` with caching | Manual tracking or service discovery |
+| **Discovery** | `A2AEndpointRegistry` with caching | Manual tracking or service discovery |
 | **Transport** | JSON-RPC via WebFlux | JSON-RPC, gRPC (via Python SDK) |
 | **Configuration** | Spring Boot properties | Environment variables, .env files |
 

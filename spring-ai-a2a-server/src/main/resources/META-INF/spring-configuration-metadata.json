@@ -1,0 +1,60 @@
+{
+  "groups": [
+    {
+      "name": "spring.ai.a2a.server",
+      "type": "org.springaicommunity.a2a.server.A2AServerProperties",
+      "description": "Configuration properties for Spring AI A2A Server."
+    },
+    {
+      "name": "spring.ai.a2a.server.streaming",
+      "type": "org.springaicommunity.a2a.server.A2AServerProperties$Streaming",
+      "sourceType": "org.springaicommunity.a2a.server.A2AServerProperties",
+      "description": "Streaming configuration for A2A protocol."
+    }
+  ],
+  "properties": [
+    {
+      "name": "spring.ai.a2a.server.base-path",
+      "type": "java.lang.String",
+      "description": "Base path for A2A protocol endpoints.",
+      "defaultValue": "/a2a"
+    },
+    {
+      "name": "spring.ai.a2a.server.cors-enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable CORS for A2A endpoints.",
+      "defaultValue": false
+    },
+    {
+      "name": "spring.ai.a2a.server.streaming.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable streaming support for A2A protocol.",
+      "defaultValue": true
+    },
+    {
+      "name": "spring.ai.a2a.server.streaming.timeout",
+      "type": "java.time.Duration",
+      "description": "Timeout for streaming connections.",
+      "defaultValue": "30s"
+    },
+    {
+      "name": "spring.ai.a2a.server.streaming.buffer-size",
+      "type": "java.lang.Integer",
+      "description": "Buffer size for streaming responses.",
+      "defaultValue": 256
+    },
+    {
+      "name": "spring.ai.a2a.server.task.subscription.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable task subscription support.",
+      "defaultValue": true
+    },
+    {
+      "name": "spring.ai.a2a.server.task.subscription.max-subscribers",
+      "type": "java.lang.Integer",
+      "description": "Maximum number of concurrent task subscribers.",
+      "defaultValue": 100
+    }
+  ],
+  "hints": []
+}

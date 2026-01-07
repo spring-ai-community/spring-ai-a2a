@@ -37,6 +37,7 @@
 
 	<modules>
 		<module>spring-ai-a2a-core</module>
+		<module>spring-ai-a2a-client</module>
 		<module>spring-ai-a2a-server</module>
 		<module>spring-boot-starter-spring-ai-a2a</module>
 		<module>spring-ai-a2a-examples</module>

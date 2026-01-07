@@ -16,19 +16,14 @@
 
 package org.springaicommunity.a2a.integration;
 
-import java.util.List;
-
 import io.a2a.spec.AgentCard;
-import io.a2a.spec.Message;
-import io.a2a.spec.Part;
-import io.a2a.spec.TextPart;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import org.springaicommunity.a2a.core.A2ARequest;
-import org.springaicommunity.a2a.core.A2AResponse;
-import org.springaicommunity.a2a.core.agent.A2AAgentClient;
-import org.springaicommunity.a2a.core.agent.DefaultA2AAgentClient;
+import org.springaicommunity.a2a.client.A2AClient;
+import org.springaicommunity.a2a.client.DefaultA2AClient;
+import org.springaicommunity.agents.model.AgentResponse;
+import org.springaicommunity.agents.model.AgentTaskRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -41,8 +36,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * These tests verify end-to-end functionality of the A2A implementation including:
  * <ul>
  * <li>Agent card discovery and retrieval</li>
- * <li>DefaultA2AAgentClient usage</li>
- * <li>Basic request/response communication</li>
+ * <li>DefaultA2AClient usage</li>
+ * <li>Basic request/response communication using AgentModel API</li>
  * <li>Message content handling and transformation</li>
  * <li>Multiple sequential calls</li>
  * </ul>
@@ -60,7 +55,7 @@ class A2AClientServerIntegrationTests {
 	@Autowired
 	private AgentCard agentCard;
 
-	private A2AAgentClient agentClient;
+	private A2AClient agentClient;
 
 	/**
 	 * Set up the agent URL and client using the fixed test port.
@@ -72,8 +67,8 @@ class A2AClientServerIntegrationTests {
 	void setUp() {
 		this.agentUrl = "http://localhost:" + TEST_PORT + "/a2a";
 
-		// Create A2AAgentClient using DefaultA2AAgentClient
-		this.agentClient = DefaultA2AAgentClient.builder().agentUrl(this.agentUrl).build();
+		// Create A2AClient using DefaultA2AClient
+		this.agentClient = DefaultA2AClient.builder().agentUrl(this.agentUrl).build();
 	}
 
 	/**
@@ -99,12 +94,12 @@ class A2AClientServerIntegrationTests {
 	}
 
 	/**
-	 * Tests agent card retrieval via DefaultA2AAgentClient.
+	 * Tests agent card retrieval via DefaultA2AClient.
 	 *
 	 * <p>
 	 * This test verifies:
 	 * <ul>
-	 * <li>Agent cards can be fetched from agents using DefaultA2AAgentClient</li>
+	 * <li>Agent cards can be fetched from agents using DefaultA2AClient</li>
 	 * <li>Agent metadata is correctly populated</li>
 	 * <li>Skills are properly advertised</li>
 	 * </ul>
@@ -132,49 +127,38 @@ class A2AClientServerIntegrationTests {
 
 		// Verify capabilities
 		assertThat(retrievedCard.capabilities()).isNotNull();
-		assertThat(retrievedCard.capabilities().streaming()).isFalse();
+		assertThat(retrievedCard.capabilities().streaming()).isTrue();
 		assertThat(retrievedCard.capabilities().pushNotifications()).isFalse();
 	}
 
 	/**
-	 * Tests basic synchronous request/response using DefaultA2AAgentClient.
+	 * Tests basic synchronous request/response using DefaultA2AClient with AgentModel API.
 	 *
 	 * <p>
 	 * This test verifies:
 	 * <ul>
-	 * <li>DefaultA2AAgentClient can send messages to A2A agents</li>
-	 * <li>Messages are properly sent and responses received</li>
-	 * <li>Text content is properly extracted from responses</li>
+	 * <li>DefaultA2AClient can send tasks to A2A agents using call() method</li>
+	 * <li>AgentTaskRequest is properly processed</li>
+	 * <li>AgentResponse contains the expected text content</li>
 	 * </ul>
 	 */
 	@Test
 	void testBasicClientServerCommunication() {
-		// Create a request
-		A2ARequest request = A2ARequest.of("Hello, agent!");
+		// Create a task request using the AgentModel API
+		AgentTaskRequest request = AgentTaskRequest.builder("Hello, agent!", null).build();
 
-		// Send the request and get response
-		A2AResponse response = this.agentClient.sendMessage(request);
+		// Send the request and get response using call()
+		AgentResponse response = this.agentClient.call(request);
 
 		// Verify response
 		assertThat(response).isNotNull();
-		assertThat(response.getParts()).isNotNull();
-		assertThat(response.getParts()).isNotEmpty();
-
-		// Extract text from response
-		StringBuilder text = new StringBuilder();
-		for (Part<?> part : response.getParts()) {
-			if (part instanceof TextPart textPart) {
-				text.append(textPart.text());
-			}
-		}
-
-		String responseText = text.toString();
-		assertThat(responseText).contains("Echo:");
-		assertThat(responseText).contains("Hello, agent!");
+		assertThat(response.getText()).isNotNull();
+		assertThat(response.getText()).contains("Echo:");
+		assertThat(response.getText()).contains("Hello, agent!");
 	}
 
 	/**
-	 * Tests multiple sequential calls using DefaultA2AAgentClient.
+	 * Tests multiple sequential calls using DefaultA2AClient with AgentModel API.
 	 *
 	 * <p>
 	 * This test verifies:
@@ -187,37 +171,31 @@ class A2AClientServerIntegrationTests {
 	@Test
 	void testMultipleSequentialCalls() {
 		// First call
-		A2ARequest request1 = A2ARequest.of("First message");
-		A2AResponse response1 = this.agentClient.sendMessage(request1);
+		AgentTaskRequest request1 = AgentTaskRequest.builder("First message", null).build();
+		AgentResponse response1 = this.agentClient.call(request1);
 
 		assertThat(response1).isNotNull();
-		assertThat(response1.getParts()).isNotEmpty();
-
-		String responseText1 = extractTextFromResponse(response1);
-		assertThat(responseText1).contains("Echo:");
-		assertThat(responseText1).contains("First message");
+		assertThat(response1.getText()).isNotNull();
+		assertThat(response1.getText()).contains("Echo:");
+		assertThat(response1.getText()).contains("First message");
 
 		// Second call
-		A2ARequest request2 = A2ARequest.of("Second message");
-		A2AResponse response2 = this.agentClient.sendMessage(request2);
+		AgentTaskRequest request2 = AgentTaskRequest.builder("Second message", null).build();
+		AgentResponse response2 = this.agentClient.call(request2);
 
 		assertThat(response2).isNotNull();
-		assertThat(response2.getParts()).isNotEmpty();
-
-		String responseText2 = extractTextFromResponse(response2);
-		assertThat(responseText2).contains("Echo:");
-		assertThat(responseText2).contains("Second message");
+		assertThat(response2.getText()).isNotNull();
+		assertThat(response2.getText()).contains("Echo:");
+		assertThat(response2.getText()).contains("Second message");
 
 		// Third call
-		A2ARequest request3 = A2ARequest.of("Third message");
-		A2AResponse response3 = this.agentClient.sendMessage(request3);
+		AgentTaskRequest request3 = AgentTaskRequest.builder("Third message", null).build();
+		AgentResponse response3 = this.agentClient.call(request3);
 
 		assertThat(response3).isNotNull();
-		assertThat(response3.getParts()).isNotEmpty();
-
-		String responseText3 = extractTextFromResponse(response3);
-		assertThat(responseText3).contains("Echo:");
-		assertThat(responseText3).contains("Third message");
+		assertThat(response3.getText()).isNotNull();
+		assertThat(response3.getText()).contains("Echo:");
+		assertThat(response3.getText()).contains("Third message");
 	}
 
 	/**
@@ -233,14 +211,12 @@ class A2AClientServerIntegrationTests {
 	@Test
 	void testUppercaseSkill() {
 		// Send a message with uppercase keyword to trigger the skill
-		A2ARequest request = A2ARequest.of("test UPPERCASE conversion");
-		A2AResponse response = this.agentClient.sendMessage(request);
+		AgentTaskRequest request = AgentTaskRequest.builder("test UPPERCASE conversion", null).build();
+		AgentResponse response = this.agentClient.call(request);
 
 		assertThat(response).isNotNull();
-		assertThat(response.getParts()).isNotEmpty();
-
-		String responseText = extractTextFromResponse(response);
-		assertThat(responseText).isEqualTo("TEST UPPERCASE CONVERSION");
+		assertThat(response.getText()).isNotNull();
+		assertThat(response.getText()).isEqualTo("TEST UPPERCASE CONVERSION");
 	}
 
 	/**
@@ -260,14 +236,12 @@ class A2AClientServerIntegrationTests {
 	@Test
 	void testEmptyMessage() {
 		try {
-			A2ARequest request = A2ARequest.of("");
-			A2AResponse response = this.agentClient.sendMessage(request);
+			AgentTaskRequest request = AgentTaskRequest.builder("", null).build();
+			AgentResponse response = this.agentClient.call(request);
 
 			assertThat(response).isNotNull();
-			assertThat(response.getParts()).isNotEmpty();
-
-			String responseText = extractTextFromResponse(response);
-			assertThat(responseText).contains("Echo:");
+			assertThat(response.getText()).isNotNull();
+			assertThat(response.getText()).contains("Echo:");
 		}
 		catch (Exception e) {
 			// Accept failure if ChatClient is not available (no OPENAI_API_KEY)
@@ -277,46 +251,26 @@ class A2AClientServerIntegrationTests {
 	}
 
 	/**
-	 * Tests request with custom parts.
+	 * Tests request with task description.
 	 *
 	 * <p>
 	 * This test verifies:
 	 * <ul>
-	 * <li>Requests can be created with custom parts</li>
-	 * <li>Multiple text parts are handled correctly</li>
+	 * <li>AgentTaskRequest with goal/description is handled correctly</li>
+	 * <li>Response contains the expected content</li>
 	 * </ul>
 	 */
 	@Test
-	void testRequestWithCustomParts() {
-		List<Part<?>> parts = List.of(new TextPart("Hello "), new TextPart("World"));
-		Message message = Message.builder().role(Message.Role.USER).parts(parts).build();
-		A2ARequest request = new A2ARequest(message, null, null);
-
-		A2AResponse response = this.agentClient.sendMessage(request);
+	void testRequestWithTaskDescription() {
+		AgentTaskRequest request = AgentTaskRequest.builder("Hello World", null).build();
+		AgentResponse response = this.agentClient.call(request);
 
 		assertThat(response).isNotNull();
-		assertThat(response.getParts()).isNotEmpty();
-
-		String responseText = extractTextFromResponse(response);
-		assertThat(responseText).contains("Echo:");
+		assertThat(response.getText()).isNotNull();
+		assertThat(response.getText()).contains("Echo:");
 		// The LLM may format with spaces, just check it contains both words
-		assertThat(responseText).contains("Hello");
-		assertThat(responseText).contains("World");
-	}
-
-	/**
-	 * Helper method to extract text from A2AResponse.
-	 */
-	private String extractTextFromResponse(A2AResponse response) {
-		StringBuilder text = new StringBuilder();
-		if (response.getParts() != null) {
-			for (Part<?> part : response.getParts()) {
-				if (part instanceof TextPart textPart) {
-					text.append(textPart.text());
-				}
-			}
-		}
-		return text.toString();
+		assertThat(response.getText()).contains("Hello");
+		assertThat(response.getText()).contains("World");
 	}
 
 }

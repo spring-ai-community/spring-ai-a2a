@@ -22,6 +22,12 @@
 			<artifactId>spring-ai-a2a-core</artifactId>
 		</dependency>
 
+		<!-- Spring AI A2A Client -->
+		<dependency>
+			<groupId>org.springaicommunity</groupId>
+			<artifactId>spring-ai-a2a-client</artifactId>
+		<version>${project.version}</version>		</dependency>
+
 		<!-- A2A Java SDK -->
 		<dependency>
 			<groupId>io.github.a2asdk</groupId>
@@ -36,6 +42,18 @@
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-webmvc</artifactId>
+		</dependency>
+
+		<!-- Spring WebFlux (for reactive streaming support) -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-webflux</artifactId>
+		</dependency>
+
+		<!-- Project Reactor Core (for Flux/Mono) -->
+		<dependency>
+			<groupId>io.projectreactor</groupId>
+			<artifactId>reactor-core</artifactId>
 		</dependency>
 
 		<!-- Jakarta Servlet API -->
@@ -56,6 +74,33 @@
 			<artifactId>spring-ai-client-chat</artifactId>
 			<optional>true</optional>
 		</dependency>
+
+		<!-- Spring Boot Autoconfigure (for auto-configuration support) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-autoconfigure</artifactId>
+		</dependency>
+
+		<!-- Spring Boot Configuration Processor (for @ConfigurationProperties) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-configuration-processor</artifactId>
+			<optional>true</optional>
+		</dependency>
+
+	<!-- Spring AI Agents (for AgentModel abstraction) -->
+	<dependency>
+		<groupId>org.springaicommunity.agents</groupId>
+		<artifactId>spring-ai-agents-core</artifactId>
+		<version>0.1.0-SNAPSHOT</version>
+	</dependency>
+
+	<!-- Spring AI Agent Model (for AgentModel, AgentResponse, etc.) -->
+	<dependency>
+		<groupId>org.springaicommunity.agents</groupId>
+		<artifactId>spring-ai-agent-model</artifactId>
+		<version>0.1.0-SNAPSHOT</version>
+	</dependency>
 	</dependencies>
 
 </project>

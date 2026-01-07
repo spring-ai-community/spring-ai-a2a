@@ -18,14 +18,14 @@ package org.springaicommunity.a2a.integration;
 
 import java.util.List;
 
-import org.springaicommunity.a2a.server.agentexecution.SpringAIAgentExecutor;
+import org.springaicommunity.a2a.server.agentexecution.A2AAgentModel;
 import io.a2a.spec.AgentCapabilities;
 import io.a2a.spec.AgentCard;
 import io.a2a.spec.AgentInterface;
 import io.a2a.spec.AgentSkill;
 
-import org.springaicommunity.a2a.server.A2AAgentServer;
-import org.springaicommunity.a2a.server.DefaultA2AAgentServer;
+import org.springaicommunity.a2a.server.A2AServer;
+import org.springaicommunity.a2a.server.DefaultA2AServer;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.model.ApiKey;
 import org.springframework.ai.model.SimpleApiKey;
@@ -43,13 +43,13 @@ import org.springframework.util.StringUtils;
  * Test Spring Boot application for A2A integration tests.
  *
  * <p>
- * This application demonstrates A2A agent configuration:
+ * This application demonstrates A2A agent configuration using the AgentModel pattern:
  * <ul>
- * <li>Starts an embedded server on a random port</li>
- * <li>Registers {@link TestAgent} as an {@link AgentExecutor}</li>
+ * <li>Starts an embedded server on a fixed port (58888)</li>
+ * <li>Creates agent using A2AAgentModel.builder() pattern</li>
  * <li>Creates {@link AgentCard} with skills</li>
  * <li>Exposes A2A endpoint at /a2a</li>
- * <li>Optionally provides ChatClient using OpenAI when OPENAI_API_KEY is set</li>
+ * <li>Uses ChatModel from OpenAI when OPENAI_API_KEY is set</li>
  * </ul>
  *
  * @author Ilayaperumal Gopinathan
@@ -63,16 +63,45 @@ public class TestA2AApplication {
 	}
 
 	/**
-	 * Register the test agent as an AgentExecutor.
+	 * Register the test agent using the A2AAgentModel builder pattern.
 	 * <p>
-	 * TestAgent extends DefaultSpringAIAgentExecutor which implements
-	 * SpringAIAgentExecutor.
-	 * @param chatClient optional ChatClient (only available when OPENAI_API_KEY is set)
-	 * @return TestAgent implementing SpringAIAgentExecutor
+	 * This demonstrates the new builder-based approach for creating agents.
+	 * The agent is created declaratively using A2AAgentModel.builder().
+	 * @param chatModel the chat model for LLM interactions
+	 * @return A2AAgentModel test agent
 	 */
 	@Bean
-	public SpringAIAgentExecutor agentExecutor(@Autowired(required = false) ChatClient chatClient) {
-		return new TestAgent(chatClient);
+	public A2AAgentModel agentExecutor(org.springframework.ai.chat.model.ChatModel chatModel) {
+		return A2AAgentModel.builder()
+			.chatClient(ChatClient.builder(chatModel).build())
+			.systemPrompt(getSystemPrompt())
+			.build();
+	}
+
+	/**
+	 * Get the system prompt that defines the test agent's behavior.
+	 *
+	 * @return the system prompt for the test agent
+	 */
+	private String getSystemPrompt() {
+		return """
+			You are a test echo agent for integration testing.
+
+			You support the following skills based on keywords in the user input:
+			- ECHO (default): Respond with "Echo: " followed by the user's message
+			- UPPERCASE: Convert the entire message to uppercase and return it
+			- ANALYZE: Provide a brief analysis of the text
+
+			Important formatting rules:
+			- For ECHO: Always prefix with "Echo: " (case-sensitive)
+			- For UPPERCASE: Return ONLY the uppercased text, no prefix
+			- For ANALYZE: Provide a brief analysis
+
+			Detect which skill to use based on keywords in the user input:
+			- If input contains "uppercase" or "UPPERCASE" → use UPPERCASE skill
+			- If input contains "analyze" or "ANALYZE" → use ANALYZE skill
+			- Otherwise → use ECHO skill (default)
+			""";
 	}
 
 	/**
@@ -90,7 +119,7 @@ public class TestA2AApplication {
 			.version("1.0.0")
 			.protocolVersion("0.1.0")
 			.capabilities(AgentCapabilities.builder()
-				.streaming(false)
+				.streaming(true)
 				.pushNotifications(false)
 				.stateTransitionHistory(false)
 				.build())
@@ -126,14 +155,14 @@ public class TestA2AApplication {
 	}
 
 	/**
-	 * Create A2AAgentServer that exposes the agent via HTTP endpoints.
+	 * Create A2AServer that exposes the agent via HTTP endpoints.
 	 * @param agentCard the agent card
-	 * @param agentExecutor the agent executor
-	 * @return A2AAgentServer instance
+	 * @param agentExecutor the agent executor (A2AAgentModel)
+	 * @return A2AServer instance
 	 */
 	@Bean
-	public A2AAgentServer a2aAgentServer(AgentCard agentCard, SpringAIAgentExecutor agentExecutor) {
-		return new DefaultA2AAgentServer(agentCard, agentExecutor);
+	public A2AServer a2aAgentServer(AgentCard agentCard, A2AAgentModel agentExecutor) {
+		return new DefaultA2AServer(agentCard, agentExecutor);
 	}
 
 	/**

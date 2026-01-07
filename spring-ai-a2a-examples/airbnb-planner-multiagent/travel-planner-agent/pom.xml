@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+		 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>org.springaicommunity</groupId>
+		<artifactId>spring-ai-a2a-examples</artifactId>
+		<version>0.1.0-SNAPSHOT</version>
+	</parent>
+
+	<artifactId>airbnb-planner-example</artifactId>
+	<name>Airbnb Travel Planner Multi-Agent Example</name>
+	<description>
+		Demonstrates Spring AI A2A multi-agent architecture with:
+		- Simple specialized agents (Weather, Accommodation)
+		- Orchestrator agent with spring-ai-agent-utils tools
+		- A2A agents registered as ToolCallbacks
+		- Simplified SpringAIAgentExecutor API
+		- Custom generateResponse() with progress updates
+	</description>
+
+	<dependencies>
+		<!-- Spring Boot Starter Web -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<!-- Spring AI A2A Starter -->
+		<dependency>
+			<groupId>org.springaicommunity</groupId>
+			<artifactId>spring-boot-starter-spring-ai-a2a</artifactId>
+		</dependency>
+
+		<!-- Spring AI A2A Client (for A2AAgentToolCallback) -->
+		<dependency>
+			<groupId>org.springaicommunity</groupId>
+			<artifactId>spring-ai-a2a-client</artifactId>
+		<version>${project.version}</version>
+		</dependency>
+
+		<!-- Spring AI OpenAI for LLM -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-model-openai</artifactId>
+		</dependency>
+
+		<!-- Spring AI MCP for tool integration -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-mcp</artifactId>
+		</dependency>
+
+		<!-- Spring AI Agent Utils for local tools (FileSystem, Web, Shell, etc.) -->
+		<!-- TODO: Uncomment when spring-ai-agent-utils is available -->
+		<!--
+		<dependency>
+			<groupId>org.springaicommunity</groupId>
+			<artifactId>spring-ai-agent-utils</artifactId>
+			<version>0.1.0-SNAPSHOT</version>
+		</dependency>
+		-->
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>

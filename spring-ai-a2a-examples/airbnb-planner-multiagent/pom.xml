@@ -14,12 +14,23 @@
 	<artifactId>airbnb-planner-multiagent</artifactId>
 	<packaging>pom</packaging>
 	<name>Airbnb Planner Multi-Agent Example</name>
-	<description>Multi-agent travel planning example using Spring AI A2A protocol</description>
+	<description>
+		Spring AI A2A multi-agent example demonstrating THREE integration patterns:
+		1. Local SubAgents (in-process ChatClient) - research, calculator
+		2. A2A Remote Agents (HTTP/A2A protocol) - accommodation
+		3. MCP Tools (stdio protocol) - weather
+
+		Features:
+		- Unified SubAgent delegation via auto-configuration
+		- Transparent routing (local vs remote)
+		- Simplified SpringAIAgentExecutor API
+		- Zero boilerplate agent development
+		- Configuration-driven setup (application.yml)
+	</description>
 
 	<modules>
-		<module>weather-agent-server</module>
-		<module>airbnb-agent-server</module>
-		<module>host-agent-server</module>
+		<module>travel-planner-agent</module>
+		<module>accommodation-agent</module>
 	</modules>
 
 </project>

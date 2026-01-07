@@ -61,3 +61,6 @@ spring-output/
 
 # Application specific
 *.pid
+
+# Development context and personal notes
+CLAUDE.md

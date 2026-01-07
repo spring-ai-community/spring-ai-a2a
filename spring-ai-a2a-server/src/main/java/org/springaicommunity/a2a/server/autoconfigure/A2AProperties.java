@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springaicommunity.a2a.starter;
+package org.springaicommunity.a2a.server.autoconfigure;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
