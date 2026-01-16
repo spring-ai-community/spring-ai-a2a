@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springaicommunity.a2a.client.tool;
+package org.springaicommunity.a2a.core.tool;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,6 +29,9 @@ import io.a2a.spec.TaskState;
 import io.a2a.spec.TextPart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springaicommunity.agent.tools.task.repository.BackgroundTask;
+import org.springaicommunity.agent.tools.task.repository.DefaultTaskRepository;
+import org.springaicommunity.agent.tools.task.repository.TaskRepository;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.definition.DefaultToolDefinition;
 import org.springframework.ai.tool.definition.ToolDefinition;
@@ -40,8 +43,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -62,6 +63,7 @@ import java.util.function.BiConsumer;
  *   <li>Synchronous and asynchronous execution modes</li>
  *   <li>Automatic client caching per agent URL</li>
  *   <li>Configurable timeouts per agent</li>
+ *   <li>TaskRepository integration for background task management</li>
  * </ul>
  *
  * <p><strong>Usage Example:</strong>
@@ -72,9 +74,12 @@ import java.util.function.BiConsumer;
  *     "accommodation", "http://localhost:10002/a2a"
  * );
  *
+ * TaskRepository taskRepository = new DefaultTaskRepository();
+ *
  * ToolCallback a2aAgentTool = new A2AToolCallback(
  *     agentUrls,
- *     Duration.ofMinutes(2)
+ *     Duration.ofMinutes(2),
+ *     taskRepository
  * );
  *
  * // LLM can now call A2AAgent(subagent_type="weather", prompt="...")
@@ -95,8 +100,15 @@ import java.util.function.BiConsumer;
  * <p>When the LLM calls the tool, this callback routes the request to the appropriate
  * remote A2A agent based on the subagent_type and returns the agent's response.
  *
+ * <p><strong>Background Task Retrieval:</strong>
+ * <p>When run_in_background is true, task results can be retrieved using the
+ * TaskOutputTool from spring-ai-agent-utils. This provides a standardized way
+ * to check task status and retrieve results.
+ *
  * @author Ilayaperumal Gopinathan
  * @since 0.1.0
+ * @see TaskRepository
+ * @see BackgroundTask
  */
 public class A2AToolCallback implements ToolCallback {
 
@@ -143,25 +155,38 @@ public class A2AToolCallback implements ToolCallback {
 
 	private final ObjectMapper objectMapper = new ObjectMapper();
 
-	private final ConcurrentHashMap<String, CompletableFuture<String>> backgroundTasks = new ConcurrentHashMap<>();
+	private final TaskRepository taskRepository;
 
 	/**
-	 * Create A2A agent tool with agent URLs and default timeout.
+	 * Create A2A agent tool with agent URLs, timeout, and task repository.
 	 * @param agentUrls map of agent type to A2A endpoint URL
 	 * @param defaultTimeout default timeout for agent calls
+	 * @param taskRepository repository for managing background tasks
 	 */
-	public A2AToolCallback(Map<String, String> agentUrls, Duration defaultTimeout) {
+	public A2AToolCallback(Map<String, String> agentUrls, Duration defaultTimeout, TaskRepository taskRepository) {
 		this.agentUrls = new HashMap<>(agentUrls); // Defensive copy
 		this.defaultTimeout = defaultTimeout != null ? defaultTimeout : Duration.ofMinutes(5);
+		this.taskRepository = taskRepository != null ? taskRepository : new DefaultTaskRepository();
 		logger.info("A2AToolCallback initialized with {} agents: {}", agentUrls.size(), agentUrls.keySet());
 	}
 
 	/**
-	 * Create A2A agent tool with agent URLs (default 5 minute timeout).
+	 * Create A2A agent tool with agent URLs and default timeout (backward compatible).
+	 * <p>Uses DefaultTaskRepository for background task management.
+	 * @param agentUrls map of agent type to A2A endpoint URL
+	 * @param defaultTimeout default timeout for agent calls
+	 */
+	public A2AToolCallback(Map<String, String> agentUrls, Duration defaultTimeout) {
+		this(agentUrls, defaultTimeout, new DefaultTaskRepository());
+	}
+
+	/**
+	 * Create A2A agent tool with agent URLs (default 5 minute timeout, backward compatible).
+	 * <p>Uses DefaultTaskRepository for background task management.
 	 * @param agentUrls map of agent type to A2A endpoint URL
 	 */
 	public A2AToolCallback(Map<String, String> agentUrls) {
-		this(agentUrls, Duration.ofMinutes(5));
+		this(agentUrls, Duration.ofMinutes(5), new DefaultTaskRepository());
 	}
 
 	@Override
@@ -319,22 +344,23 @@ public class A2AToolCallback implements ToolCallback {
 	}
 
 	/**
-	 * Execute task in background and return task ID.
+	 * Execute task in background using TaskRepository and return task ID.
 	 *
 	 * <p>This method uses streaming execution to collect progress updates
-	 * from the remote agent. The task runs in a background CompletableFuture
-	 * and can be queried using the TaskOutput tool.
+	 * from the remote agent. The task runs in a BackgroundTask managed by
+	 * the TaskRepository and can be queried using the TaskOutput tool.
 	 *
 	 * @param agentUrl the agent URL
 	 * @param params the task parameters including prompt and agent type
-	 * @return formatted message with task ID for later retrieval
+	 * @return formatted message with task ID for later retrieval via TaskOutput tool
 	 */
 	private String executeBackground(String agentUrl, TaskParams params) {
 		String taskId = UUID.randomUUID().toString();
 
 		logger.info("Starting background A2A task: {} (id: {})", params.description(), taskId);
 
-		CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
+		// Use TaskRepository to manage the background task
+		BackgroundTask task = taskRepository.putTask(taskId, () -> {
 			// Create A2A Message
 			Message request = Message.builder()
 				.role(Message.Role.USER)
@@ -388,16 +414,7 @@ public class A2AToolCallback implements ToolCallback {
 			return formatResult(params, progressUpdates, finalResponse.get());
 		});
 
-		backgroundTasks.put(taskId, future);
-
-		future.whenComplete((result, error) -> {
-			if (error != null) {
-				logger.error("Background A2A task failed: {}", taskId, error);
-			}
-			else {
-				logger.info("Background A2A task completed: {}", taskId);
-			}
-		});
+		logger.info("Background task registered: {} with status: {}", taskId, task.getStatus());
 
 		return String.format("""
 				## Background Task Started
@@ -408,57 +425,11 @@ public class A2AToolCallback implements ToolCallback {
 
 				**To get the result, use the TaskOutput tool:**
 				```
-				TaskOutputTool(task_id: "%s")
+				TaskOutput(task_id: "%s")
 				```
 
 				The task is running in the background. You can continue with other work.
 				""", taskId, params.description(), params.subagentType(), taskId);
-	}
-
-	/**
-	 * Get background task output by ID.
-	 * @param taskId the task ID
-	 * @return task result or status message
-	 */
-	public String getTaskOutput(String taskId) {
-		CompletableFuture<String> future = backgroundTasks.get(taskId);
-		if (future == null) {
-			return String.format("## Task Not Found\n\nTask ID `%s` not found.", taskId);
-		}
-
-		if (!future.isDone()) {
-			return String.format("""
-					## Background Task Running
-
-					Task ID: `%s`
-					Status: In progress...
-
-					The task has not completed yet. Check again shortly.
-					""", taskId);
-		}
-
-		try {
-			String result = future.get();
-			return String.format("""
-					## Background Task Completed
-
-					Task ID: `%s`
-
-					%s
-					""", taskId, result);
-		}
-		catch (Exception e) {
-			return String.format("""
-					## Background Task Failed
-
-					Task ID: `%s`
-
-					**Error:**
-					```
-					%s
-					```
-					""", taskId, e.getMessage());
-		}
 	}
 
 	/**

@@ -36,8 +36,7 @@
 	</scm>
 
 	<modules>
-		<module>spring-ai-a2a-core</module>
-		<module>spring-ai-a2a-client</module>
+		<module>spring-ai-a2a-utils</module>
 		<module>spring-ai-a2a-server</module>
 		<module>spring-ai-a2a-examples</module>
 		<module>spring-ai-a2a-integration-tests</module>
@@ -108,15 +107,17 @@
 				<version>${a2a-java-sdk.version}</version>
 			</dependency>
 
-			<!-- Spring AI A2A modules -->
+			<!-- Spring AI Agent Utils -->
+		<dependency>
+			<groupId>org.springaicommunity</groupId>
+			<artifactId>spring-ai-agent-utils</artifactId>
+			<version>0.3.0</version>
+		</dependency>
+
+		<!-- Spring AI A2A modules -->
 			<dependency>
 				<groupId>org.springaicommunity</groupId>
-				<artifactId>spring-ai-a2a-core</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.springaicommunity</groupId>
-				<artifactId>spring-ai-a2a-client</artifactId>
+				<artifactId>spring-ai-a2a-utils</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>

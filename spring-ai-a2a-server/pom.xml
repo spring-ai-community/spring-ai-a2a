@@ -16,17 +16,11 @@
 	<description>Server implementation for Spring AI A2A protocol support</description>
 
 	<dependencies>
-		<!-- Spring AI A2A Core -->
+		<!-- Spring AI A2A Utils -->
 		<dependency>
 			<groupId>org.springaicommunity</groupId>
-			<artifactId>spring-ai-a2a-core</artifactId>
+			<artifactId>spring-ai-a2a-utils</artifactId>
 		</dependency>
-
-		<!-- Spring AI A2A Client -->
-		<dependency>
-			<groupId>org.springaicommunity</groupId>
-			<artifactId>spring-ai-a2a-client</artifactId>
-		<version>${project.version}</version>		</dependency>
 
 		<!-- A2A Java SDK -->
 		<dependency>

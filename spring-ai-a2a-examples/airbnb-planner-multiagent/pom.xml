@@ -43,15 +43,5 @@
 		<module>direct-sdk-planner</module>
 	</modules>
 
-	<dependencyManagement>
-		<dependencies>
-			<!-- Spring AI A2A Client for A2AToolCallback -->
-			<dependency>
-				<groupId>org.springaicommunity</groupId>
-				<artifactId>spring-ai-a2a-client</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
 
 </project>

@@ -25,14 +25,7 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
-		<!-- A2A Client - for A2AClientUtils only -->
-		<dependency>
-			<groupId>org.springaicommunity</groupId>
-			<artifactId>spring-ai-a2a-client</artifactId>
-			<version>${project.version}</version>
-		</dependency>
-
-		<!-- A2A Java SDK (transitive from client, listed for clarity) -->
+		<!-- A2A Java SDK -->
 		<dependency>
 			<groupId>io.github.a2asdk</groupId>
 			<artifactId>a2a-java-sdk-client</artifactId>

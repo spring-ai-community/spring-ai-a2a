@@ -11,10 +11,10 @@
 		<version>0.1.0-SNAPSHOT</version>
 	</parent>
 
-	<artifactId>spring-ai-a2a-core</artifactId>
+	<artifactId>spring-ai-a2a-utils</artifactId>
 	<packaging>jar</packaging>
-	<name>Spring AI A2A Core</name>
-	<description>Core interfaces and annotations for Spring AI A2A support</description>
+	<name>Spring AI A2A Utils</name>
+	<description>Utility classes and tools for Spring AI A2A support</description>
 
 	<dependencies>
 		<!-- A2A Java SDK Spec -->
@@ -45,6 +45,36 @@
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-annotations</artifactId>
+		</dependency>
+
+		<!-- Jackson for JSON processing (ObjectMapper) -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+		</dependency>
+
+		<!-- Spring AI Chat Client (for ToolCallback, ToolDefinition) -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-client-chat</artifactId>
+		</dependency>
+
+		<!-- Spring AI Agent Utils (for TaskRepository, BackgroundTask) -->
+	<dependency>
+		<groupId>org.springaicommunity</groupId>
+		<artifactId>spring-ai-agent-utils</artifactId>
+	</dependency>
+
+	<!-- Spring Boot AutoConfigure (for @ConditionalOnMissingBean) -->
+	<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-autoconfigure</artifactId>
+	</dependency>
+
+	<!-- SLF4J API (for logging) -->
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
 		</dependency>
 	</dependencies>
 

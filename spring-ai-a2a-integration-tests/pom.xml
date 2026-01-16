@@ -19,15 +19,11 @@
 		<!-- Spring AI A2A Modules -->
 		<dependency>
 			<groupId>org.springaicommunity</groupId>
-			<artifactId>spring-ai-a2a-core</artifactId>
+			<artifactId>spring-ai-a2a-utils</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springaicommunity</groupId>
 			<artifactId>spring-ai-a2a-server</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springaicommunity</groupId>
-			<artifactId>spring-ai-a2a-client</artifactId>
 		</dependency>
 
 		<!-- Spring AI OpenAI (for optional ChatClient with OpenAI) -->

@@ -23,10 +23,8 @@ The project consists of several modules:
 
 ```
 spring-ai-a2a/
-├── spring-ai-a2a-core/           # Core abstractions and A2A client
+├── spring-ai-a2a-utils/          # Utility classes and A2A client tools
 ├── spring-ai-a2a-server/         # A2A server implementation and agent execution
-├── spring-ai-a2a-client/         # Client for calling remote A2A agents
-├── spring-boot-starter-spring-ai-a2a/  # Spring Boot auto-configuration
 ├── spring-ai-a2a-examples/       # Example applications
 └── spring-ai-a2a-integration-tests/  # Integration tests
 ```
@@ -252,6 +250,144 @@ spring:
           model: gpt-4o-mini
           temperature: 0.7
 ```
+
+## Task Management
+
+Spring AI A2A integrates with [spring-ai-agent-utils](https://github.com/spring-ai-community/spring-ai-agent-utils) for standardized background task management. This allows A2A agents to execute long-running operations asynchronously while providing status tracking and result retrieval.
+
+### Features
+
+- **TaskRepository**: Centralized storage for background tasks
+- **TaskOutputTool**: Spring AI ToolCallback for retrieving task results
+- **Auto-configuration**: Automatic setup via Spring Boot
+- **Customizable**: Override default beans for custom implementations
+
+### How It Works
+
+When an A2A agent is called with `run_in_background: true`, the task is stored in the `TaskRepository` and a task ID is returned. The LLM can then use the `TaskOutputTool` to check the task status and retrieve results.
+
+### Usage Example
+
+**1. Background Task Execution:**
+
+```java
+// A2AToolCallback automatically uses TaskRepository
+Map<String, String> agentUrls = Map.of(
+    "research", "http://localhost:10003/a2a"
+);
+
+ToolCallback a2aTool = new A2AToolCallback(agentUrls);
+
+// When LLM calls with run_in_background=true:
+// A2AAgent(subagent_type: "research", prompt: "Research quantum computing", run_in_background: true)
+// Returns: "Task ID: abc-123"
+```
+
+**2. Task Result Retrieval:**
+
+The `TaskOutputTool` is automatically registered as a ToolCallback:
+
+```java
+// LLM can call TaskOutput tool to check results:
+// TaskOutput(task_id: "abc-123")
+// Returns task status and result
+```
+
+**3. Custom TaskRepository:**
+
+Override the default in-memory implementation:
+
+```java
+@Configuration
+public class CustomTaskConfiguration {
+
+    @Bean
+    public TaskRepository taskRepository() {
+        // Custom implementation (e.g., Redis-backed)
+        return new RedisTaskRepository(...);
+    }
+}
+```
+
+### Auto-Configuration
+
+The `TaskConfiguration` class provides automatic setup:
+
+- **TaskRepository Bean**: `DefaultTaskRepository` (in-memory ConcurrentHashMap)
+- **TaskOutputTool Bean**: Tool for retrieving task results
+- **Conditional Beans**: Use `@ConditionalOnMissingBean` for customization
+
+### Integration with A2AToolCallback
+
+The `A2AToolCallback` constructor accepts an optional `TaskRepository`:
+
+```java
+// With TaskRepository injection
+@Bean
+public ToolCallback a2aTool(
+        @Value("${agents.urls}") Map<String, String> agentUrls,
+        TaskRepository taskRepository) {
+    return new A2AToolCallback(agentUrls, Duration.ofMinutes(5), taskRepository);
+}
+
+// Without (uses DefaultTaskRepository internally)
+@Bean
+public ToolCallback a2aTool(@Value("${agents.urls}") Map<String, String> agentUrls) {
+    return new A2AToolCallback(agentUrls);
+}
+```
+
+### Task Execution Flow
+
+```
+┌─────────────┐
+│     LLM     │
+└──────┬──────┘
+       │ A2AAgent(run_in_background: true)
+       ▼
+┌─────────────────┐
+│ A2AToolCallback │
+└────────┬────────┘
+         │ taskRepository.putTask()
+         ▼
+┌─────────────────┐
+│ TaskRepository  │
+└────────┬────────┘
+         │ Returns task_id
+         ▼
+┌─────────────┐
+│     LLM     │ Receives: "Task ID: abc-123"
+└──────┬──────┘
+       │ TaskOutput(task_id: "abc-123")
+       ▼
+┌─────────────────┐
+│ TaskOutputTool  │
+└────────┬────────┘
+         │ taskRepository.getTask()
+         ▼
+┌─────────────────┐
+│ TaskRepository  │
+└────────┬────────┘
+         │ Returns task status/result
+         ▼
+┌─────────────┐
+│     LLM     │ Receives task result
+└─────────────┘
+```
+
+### Configuration Properties
+
+No configuration properties are required. The system uses sensible defaults:
+
+- **Default timeout**: 5 minutes for A2A agent calls
+- **Default repository**: `DefaultTaskRepository` (in-memory)
+- **Automatic tool registration**: `TaskOutputTool` registered automatically
+
+### Further Reading
+
+- [spring-ai-agent-utils Documentation](https://github.com/spring-ai-community/spring-ai-agent-utils)
+- [TaskRepository API](https://github.com/spring-ai-community/spring-ai-agent-utils/blob/main/src/main/java/org/springaicommunity/agent/tools/task/repository/TaskRepository.java)
+- [BackgroundTask API](https://github.com/spring-ai-community/spring-ai-agent-utils/blob/main/src/main/java/org/springaicommunity/agent/tools/task/repository/BackgroundTask.java)
 
 ## API Reference
 

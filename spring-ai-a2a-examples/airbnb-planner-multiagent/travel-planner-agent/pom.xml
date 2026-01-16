@@ -35,12 +35,6 @@
 			<artifactId>spring-ai-a2a-server</artifactId>
 		</dependency>
 
-		<!-- Spring AI A2A Client (for A2AToolCallback) -->
-		<dependency>
-			<groupId>org.springaicommunity</groupId>
-			<artifactId>spring-ai-a2a-client</artifactId>
-		</dependency>
-
 		<!-- Spring AI OpenAI for LLM -->
 		<dependency>
 			<groupId>org.springframework.ai</groupId>

@@ -22,7 +22,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springaicommunity.a2a.client.tool.A2AToolCallback;
+import org.springaicommunity.a2a.core.tool.A2AToolCallback;
 
 import java.time.Duration;
 import java.util.Map;
