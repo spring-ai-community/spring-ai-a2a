@@ -39,7 +39,6 @@
 		<module>spring-ai-a2a-core</module>
 		<module>spring-ai-a2a-client</module>
 		<module>spring-ai-a2a-server</module>
-		<module>spring-boot-starter-spring-ai-a2a</module>
 		<module>spring-ai-a2a-examples</module>
 		<module>spring-ai-a2a-integration-tests</module>
 	</modules>
@@ -117,12 +116,12 @@
 			</dependency>
 			<dependency>
 				<groupId>org.springaicommunity</groupId>
-				<artifactId>spring-ai-a2a-server</artifactId>
+				<artifactId>spring-ai-a2a-client</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springaicommunity</groupId>
-				<artifactId>spring-boot-starter-spring-ai-a2a</artifactId>
+				<artifactId>spring-ai-a2a-server</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 		</dependencies>

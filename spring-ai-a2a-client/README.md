@@ -1,286 +1,414 @@
-# A2A Agent ToolCallback Implementation
+# Spring AI A2A Client
 
-This package provides `A2AToolCallback` for integrating remote A2A agents with Spring AI's native tool calling mechanism.
+This module provides client-side support for the Agent-to-Agent (A2A) protocol, enabling Java applications to communicate with remote A2A agents.
 
-## A2AToolCallback - Remote Agent Delegation
+## Overview
 
-**Use Case:** Delegate tasks to remote A2A agents over HTTP using the A2A protocol.
+The A2A Client module offers **two distinct patterns** for integrating with remote A2A agents, depending on your use case:
 
-### Features
-- Remote agent invocation via A2A protocol
-- Streaming response collection with progress tracking
-- Synchronous and asynchronous (background) execution
-- Automatic client caching per URL
-- Configurable timeouts
-- Collects progress updates during task execution
-- Supports rich artifact responses
+1. **Spring AI Integration** - Use `A2AToolCallback` to register A2A agents as tools in Spring AI's ChatClient
+2. **Direct SDK Usage** - Use the A2A Java SDK directly for standalone client applications
 
-### Example - Basic Usage
+Both patterns use the **A2A Java SDK** under the hood with **zero wrapper abstractions**, providing direct access to the SDK's event-driven API.
+
+## Usage Patterns Comparison
+
+### Pattern 1: Spring AI Integration with A2AToolCallback
+
+**Best for:** Integrating A2A agents with Spring AI's ChatClient so the LLM can delegate to remote agents as tools.
+
+**Key Features:**
+- A2A agents appear as tool definitions to the LLM
+- Automatic tool registration via Spring Boot auto-configuration
+- LLM-driven orchestration (LLM decides when to call which agent)
+- Works alongside MCP tools and local tools uniformly
+- Task-based or message-based execution modes
+
+**Example:**
+
 ```java
-@Bean
-public ToolCallback weatherAgentTool() {
-    Map<String, String> agentUrls = Map.of(
-        "weather", "http://localhost:10001/a2a",
-        "accommodation", "http://localhost:10002/a2a"
-    );
+import org.springaicommunity.a2a.client.tool.A2AToolCallback;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.tool.ToolCallback;
+import io.a2a.spec.AgentCard;
 
-    return new A2AToolCallback(agentUrls, Duration.ofMinutes(5));
-}
-```
-
-### Example - With Multiple Agents
-```java
 @Configuration
-public class A2AAgentConfiguration {
+public class MyAgentConfiguration {
 
     @Bean
-    public ToolCallback a2aAgentTool(
-            @Value("${weather.agent.url}") String weatherUrl,
-            @Value("${accommodation.agent.url}") String accommodationUrl) {
+    public ToolCallback weatherAgentTool(
+            @Value("${weather.agent.url}") String weatherAgentUrl) {
 
-        Map<String, String> agentUrls = Map.of(
-            "weather", weatherUrl,
-            "accommodation", accommodationUrl
-        );
+        AgentCard weatherAgent = AgentCard.builder()
+            .name("Weather Agent")
+            .description("Provides weather information and forecasts")
+            .version("1.0.0")
+            .protocolVersion("0.1.0")
+            .supportedInterfaces(List.of(
+                new AgentInterface("JSONRPC", weatherAgentUrl)
+            ))
+            .build();
 
-        return new A2AToolCallback(agentUrls, Duration.ofMinutes(5));
+        // Simple message-based for quick queries
+        return new A2AToolCallback(weatherAgent, Duration.ofSeconds(30));
+    }
+
+    @Bean
+    public ChatClient chatClient(
+            ChatModel chatModel,
+            List<ToolCallback> tools) {  // Auto-injected!
+
+        return ChatClient.builder(chatModel)
+            .defaultToolCallbacks(tools)  // All tools registered
+            .build();
     }
 }
 ```
 
-### Tool Invocation Parameters
+**Usage in application:**
 
-The LLM calls the tool with these parameters:
+```java
+String response = chatClient.prompt()
+    .user("What's the weather in Paris?")
+    .call()
+    .content();
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `description` | String | Yes | Short 3-5 word task summary |
-| `prompt` | String | Yes | Full instructions for the remote A2A agent |
-| `subagent_type` | String | Yes | Type of remote agent to invoke (key from agentUrls map) |
-| `run_in_background` | Boolean | No | Whether to run asynchronously (default: false) |
-| `include_progress` | Boolean | No | Include progress updates in result (default: true) |
-| `model` | String | No | Optional model override (reserved for future use) |
-| `resume` | String | No | Optional task ID to resume (reserved for future use) |
-
-### Response Formats
-
-#### Synchronous Execution (default)
-```markdown
-## Task Result: Research Paris hotels
-
-**Agent Type:** accommodation (remote A2A)
-
-**Progress:**
-- Analyzing hotel search criteria...
-- Fetching hotel listings...
-- Ranking by user preferences...
-
-[Final hotel recommendations with details]
+// LLM autonomously decides to call weatherAgentTool
+// Response includes weather information from remote agent
 ```
 
-#### Background Execution (when `run_in_background: true`)
-```markdown
-## Background Task Started
+**When to use:**
+- ✅ Building Spring AI applications with ChatClient
+- ✅ Want LLM to orchestrate multiple tools/agents
+- ✅ Need uniform tool registration (A2A + MCP + local tools)
+- ✅ Building conversational AI assistants
 
-Task ID: `abc-123-def`
-Description: Research Paris hotels
-Agent Type: accommodation (remote A2A)
+### Pattern 2: Direct SDK Usage
 
-**To get the result, use the TaskOutput tool:**
-```
-TaskOutputTool(task_id: "abc-123-def")
-```
+**Best for:** Standalone client applications that need direct control over A2A communication without Spring AI integration.
 
-The task is running in the background. You can continue with other work.
-```
+**Key Features:**
+- No Spring AI dependency
+- Full control over SDK lifecycle
+- Event-driven API with BiConsumer callbacks
+- Synchronous or streaming execution modes
+- Minimal abstraction layer
 
-### Configuration Options
+**Example (Synchronous):**
 
-| Constructor Parameter | Type | Default | Description |
-|----------------------|------|---------|-------------|
-| `agentUrls` | Map<String, String> | Required | Map of agent type to A2A endpoint URL |
-| `defaultTimeout` | Duration | 5 minutes | Default timeout for agent calls |
+```java
+import io.a2a.client.Client;
+import io.a2a.client.ClientEvent;
+import io.a2a.client.MessageEvent;
+import io.a2a.client.transport.jsonrpc.JSONRPCTransport;
+import io.a2a.client.transport.jsonrpc.JSONRPCTransportConfig;
+import io.a2a.spec.*;
 
-### Internal Features
+import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 
-- **Client Caching**: A2AClient instances are cached per URL
-- **Progress Tracking**: Automatically collects progress updates from streaming responses
-- **Task Management**: Manages background tasks with CompletableFuture
-- **Error Handling**: Graceful handling of timeouts, network errors, and agent failures
+public class DirectClientExample {
 
----
+    public static void main(String[] args) throws Exception {
+        String agentUrl = "http://localhost:8080/a2a";
+        Duration timeout = Duration.ofSeconds(30);
 
-## Integration with Spring AI
+        // 1. Build AgentCard for remote agent
+        AgentCard agentCard = AgentCard.builder()
+            .name("Weather Agent")
+            .description("Weather forecast agent")
+            .version("1.0.0")
+            .protocolVersion("0.1.0")
+            .supportedInterfaces(List.of(
+                new io.a2a.spec.AgentInterface("JSONRPC", agentUrl)
+            ))
+            .build();
 
-A2AToolCallback integrates seamlessly with Spring AI's tool calling flow:
+        // 2. Create client configuration
+        io.a2a.client.config.ClientConfig clientConfig =
+            new io.a2a.client.config.ClientConfig.Builder()
+                .setStreaming(false)
+                .setAcceptedOutputModes(List.of("text"))
+                .build();
 
-```
-User Query
-    ↓
-LLM analyzes available tools
-    ↓
-LLM decides to call remote A2A agent
-    ↓
-Spring AI's ToolCallingManager executes ToolCallback
-    ↓
-A2A request sent to remote agent
-    ↓
-Progress updates stream back (collected)
-    ↓
-Final result with progress returned to LLM
-    ↓
-LLM synthesizes response
-```
+        // 3. Create message request
+        Message request = Message.builder()
+            .role(Message.Role.USER)
+            .parts(List.of(new TextPart("What's the weather in Paris?")))
+            .build();
 
----
+        // 4. Setup synchronous response handling
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<Message> responseRef = new AtomicReference<>();
 
-## Tool Definition
+        BiConsumer<ClientEvent, AgentCard> consumer = (event, card) -> {
+            if (event instanceof MessageEvent messageEvent) {
+                responseRef.set(messageEvent.getMessage());
+                latch.countDown();
+            }
+        };
 
-The generated tool definition for the LLM:
+        // 5. Build client with consumer registered
+        Client client = Client.builder(agentCard)
+            .clientConfig(clientConfig)
+            .withTransport(JSONRPCTransport.class, new JSONRPCTransportConfig())
+            .addConsumers(List.of(consumer))
+            .build();
 
-```json
-{
-  "name": "A2AAgent",
-  "description": "Delegate work to a specialized remote A2A agent for complex tasks...",
-  "input_schema": {
-    "type": "object",
-    "properties": {
-      "description": {
-        "type": "string",
-        "description": "Short 3-5 word task summary"
-      },
-      "prompt": {
-        "type": "string",
-        "description": "Full instructions for the remote A2A agent"
-      },
-      "subagent_type": {
-        "type": "string",
-        "description": "Type of remote agent to invoke (e.g., weather, accommodation)"
-      },
-      "run_in_background": {
-        "type": "boolean",
-        "description": "Whether to run the task asynchronously (default: false)"
-      }
-    },
-    "required": ["description", "prompt", "subagent_type"]
-  }
+        // 6. Send message and wait for response
+        client.sendMessage(request);
+        latch.await(timeout.toSeconds(), TimeUnit.SECONDS);
+
+        // 7. Extract response
+        Message response = responseRef.get();
+        String text = ((TextPart) response.parts().get(0)).text();
+        System.out.println("Weather: " + text);
+    }
 }
 ```
 
----
+**When to use:**
+- ✅ Building standalone Java applications
+- ✅ Need full control over SDK configuration
+- ✅ Don't need LLM orchestration
+- ✅ Implementing custom client logic
 
-## Advanced Usage
+## Decision Guide
 
-### Background Task Retrieval
+### Use A2AToolCallback when:
 
-When a task runs in background, you need to poll for results:
+| Requirement | A2AToolCallback |
+|-------------|-----------------|
+| Spring AI ChatClient integration | ✅ |
+| LLM-driven tool selection | ✅ |
+| Uniform tool registration (A2A + MCP + local) | ✅ |
+| Automatic Spring Boot configuration | ✅ |
+| Conversational AI applications | ✅ |
+
+### Use Direct SDK when:
+
+| Requirement | Direct SDK |
+|-------------|------------|
+| Standalone Java application | ✅ |
+| No Spring AI dependency needed | ✅ |
+| Custom client logic | ✅ |
+| Full control over SDK lifecycle | ✅ |
+| Low-level event handling | ✅ |
+
+## Module Contents
+
+### Core Classes
+
+- **`A2AToolCallback`** - Wraps A2A agents as Spring AI ToolCallbacks
+  - Location: `org.springaicommunity.a2a.client.tool.A2AToolCallback`
+  - Purpose: Spring AI integration
+  - Dependencies: Spring AI, A2A Java SDK
+
+### Examples
+
+- **`DirectSdkUsageExample`** - Complete examples of direct SDK usage
+  - Location: `src/test/java/org/springaicommunity/a2a/client/examples/DirectSdkUsageExample.java`
+  - Shows: Synchronous and streaming patterns
+  - Demonstrates: Event handling, error handling, progress tracking
+
+## Configuration
+
+### Spring AI Integration Configuration
+
+```yaml
+# application.yml
+
+# Remote agent URLs (for A2AToolCallback beans)
+weather:
+  agent:
+    url: http://localhost:10001/a2a
+
+accommodation:
+  agent:
+    url: http://localhost:10002/a2a
+```
+
+### Direct SDK Configuration
+
+No configuration required - create clients programmatically using the A2A Java SDK:
 
 ```java
-// The ToolCallback tracks background tasks internally
-String taskOutput = toolCallback.getTaskOutput(taskId);
+// Build AgentCard
+AgentCard agentCard = AgentCard.builder()
+    .name("My Agent")
+    .version("1.0.0")
+    .protocolVersion("0.1.0")
+    .supportedInterfaces(List.of(
+        new AgentInterface("JSONRPC", "http://localhost:8080/a2a")
+    ))
+    .build();
+
+// Build ClientConfig
+ClientConfig clientConfig = new ClientConfig.Builder()
+    .setStreaming(false)
+    .setAcceptedOutputModes(List.of("text"))
+    .build();
+
+// Create Client
+Client client = Client.builder(agentCard)
+    .clientConfig(clientConfig)
+    .withTransport(JSONRPCTransport.class, new JSONRPCTransportConfig())
+    .build();
 ```
 
-**Note:** Currently, background task retrieval requires manual polling. Future enhancements may provide automatic polling or webhook support.
+## Event-Driven API Patterns
 
-### Custom Error Handling
+The A2A Java SDK uses an event-driven callback pattern:
 
-Errors are formatted as markdown and returned to the LLM:
+### Synchronous Pattern (Blocking)
 
-```markdown
-## Remote A2A Agent Error
+```java
+CountDownLatch latch = new CountDownLatch(1);
+AtomicReference<Message> responseRef = new AtomicReference<>();
 
-**Error:** Remote A2A agent not found: weather
+BiConsumer<ClientEvent, AgentCard> consumer = (event, card) -> {
+    if (event instanceof MessageEvent messageEvent) {
+        responseRef.set(messageEvent.getMessage());
+        latch.countDown();
+    }
+};
 
-**Details:**
+// Register consumer at build time
+Client client = Client.builder(agentCard)
+    .addConsumers(List.of(consumer))
+    .build();
+
+client.sendMessage(request);
+latch.await(timeout.toSeconds(), TimeUnit.SECONDS);
 ```
-Available agents: [accommodation, research]
+
+### Streaming Pattern (Progressive)
+
+```java
+List<String> progressUpdates = new ArrayList<>();
+CountDownLatch latch = new CountDownLatch(1);
+
+BiConsumer<ClientEvent, AgentCard> consumer = (event, card) -> {
+    if (event instanceof TaskEvent taskEvent) {
+        String status = taskEvent.getTask().status();
+        if ("running".equals(status)) {
+            progressUpdates.add(extractProgress(taskEvent));
+        } else if ("completed".equals(status)) {
+            latch.countDown();
+        }
+    }
+};
+
+Client client = Client.builder(agentCard)
+    .clientConfig(new ClientConfig.Builder().setStreaming(true).build())
+    .addConsumers(List.of(consumer))
+    .build();
+
+client.sendMessage(request);
+latch.await();
 ```
 
-Please check the agent URL and parameters.
+## SDK Consumer Registration
+
+**Important:** The A2A Java SDK requires consumers to be registered at **client build time**:
+
+```java
+// ✅ CORRECT - Register at build time
+Client client = Client.builder(agentCard)
+    .addConsumers(List.of(consumer))  // Register here
+    .build();
+
+client.sendMessage(request);  // No consumer parameter
+
+// ❌ INCORRECT - Cannot pass to sendMessage
+client.sendMessage(request, consumer);  // This doesn't exist!
 ```
 
----
+This means you typically need to create a **new Client instance** for each invocation if you want different event handling.
 
-## Error Handling
+## Dependencies
 
-The implementation handles various error scenarios:
+### Maven
 
-| Error Type | Behavior |
-|------------|----------|
-| **Agent Not Found** | Returns formatted error with available agent types |
-| **Network Timeout** | Throws exception after configured timeout |
-| **Streaming Error** | Captures and propagates exception |
-| **Task Failure** | Returns error context from A2A agent |
-| **Background Task Completion Failure** | Error captured in future, retrievable via getTaskOutput |
+```xml
+<dependency>
+    <groupId>org.springaicommunity</groupId>
+    <artifactId>spring-ai-a2a-client</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+</dependency>
 
----
+<!-- A2A Java SDK (transitive dependency) -->
+<dependency>
+    <groupId>io.github.a2asdk</groupId>
+    <artifactId>a2a-java-sdk-client</artifactId>
+    <version>0.4.0.Alpha1-SNAPSHOT</version>
+</dependency>
 
-## Performance Considerations
+<!-- For Spring AI integration only -->
+<dependency>
+    <groupId>org.springframework.ai</groupId>
+    <artifactId>spring-ai-starter-model-openai</artifactId>
+    <version>2.0.0-M1</version>
+</dependency>
+```
 
-### Synchronous Execution
-- **Latency**: Agent response time + network overhead
-- **Memory**: Progress updates and response accumulated in memory
-- **Throughput**: Moderate - waits for completion
+## Examples
 
-### Background Execution
-- **Latency**: Immediate return (task ID)
-- **Memory**: Holds CompletableFuture until completion
-- **Throughput**: High - non-blocking
+See the following for complete working examples:
 
-### Recommendations
-- Use synchronous for operations < 30 seconds
-- Use background for operations > 1 minute
-- Consider operation complexity and user experience
+- **Spring AI Integration:** `spring-ai-a2a-examples/composable-airbnb-planner/`
+- **Direct SDK Usage:** `DirectSdkUsageExample.java` in this module's test sources
 
----
+## Architecture
 
-## Comparison with Local Agent Delegation
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Your Application                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Choice 1: Spring AI Integration                           │
+│  ┌──────────────────────────────────────────────┐          │
+│  │  ChatClient                                  │          │
+│  │    └─> A2AToolCallback                       │          │
+│  │          └─> A2A Java SDK Client             │          │
+│  └──────────────────────────────────────────────┘          │
+│                                                             │
+│  Choice 2: Direct SDK Usage                                │
+│  ┌──────────────────────────────────────────────┐          │
+│  │  Your Code                                   │          │
+│  │    └─> A2A Java SDK Client.builder()        │          │
+│  │          └─> A2A Java SDK Client             │          │
+│  └──────────────────────────────────────────────┘          │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+                     JSON-RPC / HTTP
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│                    Remote A2A Agent                         │
+│         (spring-ai-a2a-server or any A2A-compatible)        │
+└─────────────────────────────────────────────────────────────┘
+```
 
-For delegating to **local** in-process agents (not remote A2A agents), use `spring-ai-agent-utils` TaskToolCallbackProvider instead:
+## Key Design Principles
 
-| Feature | A2AToolCallback (Remote) | TaskToolCallbackProvider (Local) |
-|---------|-------------------------------|----------------------------------|
-| **Location** | Remote HTTP endpoints | In-process ChatClient |
-| **Protocol** | A2A over HTTP | Direct Java calls |
-| **Discovery** | Manual URL configuration | File-based markdown definitions |
-| **Network** | Yes - requires network | No - same JVM |
-| **Use Case** | Distributed agents | Local specialized agents |
+1. **Zero Wrapper Abstractions** - Direct use of A2A Java SDK, no custom client interfaces
+2. **Event-Driven First** - Embrace SDK's BiConsumer event model
+3. **Spring AI Native** - ToolCallback integration follows Spring AI patterns
+4. **Choice of Patterns** - Two clear patterns for different use cases
+5. **Direct SDK Usage** - No utility wrappers, use the A2A SDK directly
 
----
-
-## Future Enhancements
-
-Potential additions (not yet implemented):
-
-1. **Automatic Polling for Background Tasks**
-   - Provide polling tool for LLM
-   - Auto-retrieve when task completes
-
-2. **Webhook Support**
-   - Agent pushes completion notification
-   - Reduces polling overhead
-
-3. **Retry Logic**
-   - Automatic retries on transient failures
-   - Configurable retry strategies
-
-4. **Circuit Breaker**
-   - Prevent cascading failures
-   - Graceful degradation
-
-5. **Agent Discovery**
-   - Automatic discovery of A2A agents
-   - Dynamic registration
-
-6. **Load Balancing**
-   - Distribute requests across agent replicas
-   - Health checking
-
----
-
-## References
+## Further Reading
 
 - [A2A Protocol Specification](https://a2a.anthropic.com/)
-- [Spring AI Documentation](https://docs.spring.io/spring-ai/)
-- [A2A Java SDK](https://github.com/a2asdk/a2a-java-sdk)
-- [spring-ai-agent-utils](https://github.com/spring-ai-community/spring-ai-agent-utils) - For local agent delegation
+- [A2A Java SDK Documentation](https://github.com/a2asdk/a2a-java-sdk)
+- [Spring AI Documentation](https://docs.spring.io/spring-ai/reference/)
+- [Spring AI A2A Examples](../spring-ai-a2a-examples/)
+
+## License
+
+This project is licensed under the Apache License 2.0 - see the LICENSE file for details.

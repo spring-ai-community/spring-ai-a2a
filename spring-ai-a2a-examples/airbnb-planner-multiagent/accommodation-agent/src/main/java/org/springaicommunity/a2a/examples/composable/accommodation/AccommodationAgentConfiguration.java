@@ -22,7 +22,6 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springaicommunity.a2a.server.agentexecution.A2AExecutor;
 
 /**
  * Accommodation Agent Configuration - Non-intrusive builder-based approach.
@@ -61,21 +60,20 @@ public class AccommodationAgentConfiguration {
 	private static final Logger logger = LoggerFactory.getLogger(AccommodationAgentConfiguration.class);
 
 	/**
-	 * Create Accommodation Agent using builder pattern.
+	 * Create Accommodation Agent ChatClient with system prompt.
 	 *
-	 * <p>This demonstrates the <strong>non-intrusive</strong> approach for
-	 * a remote A2A agent - no inheritance required!
+	 * <p>This demonstrates the <strong>simplified</strong> approach using
+	 * Spring AI's native ChatClient - no custom executors required!
 	 *
 	 * @param chatModel the chat model for LLM interactions
-	 * @return the configured agent executor
+	 * @return the configured ChatClient
 	 */
 	@Bean
-	public A2AExecutor accommodationAgent(ChatModel chatModel) {
-		logger.info("Creating AccommodationAgent using builder pattern");
+	public ChatClient accommodationAgent(ChatModel chatModel) {
+		logger.info("Creating AccommodationAgent with ChatClient");
 
-		return A2AExecutor.builder()
-			.chatClient(ChatClient.builder(chatModel).build())
-			.systemPrompt(getSystemPrompt())
+		return ChatClient.builder(chatModel)
+			.defaultSystem(getSystemPrompt())
 			.build();
 	}
 
@@ -166,17 +164,16 @@ public class AccommodationAgentConfiguration {
 	}
 
 	/*
-	 * NOTE: This configuration uses A2AAgentModel.builder()'s default execution implementation.
+	 * NOTE: This configuration uses Spring AI's native ChatClient with simplified architecture.
 	 *
 	 * Since this is a simple specialized agent, no custom logic is needed.
-	 * The builder creates an A2AAgentModel that executes requests using:
-	 *   getChatClient().prompt()
-	 *     .system(getSystemPrompt())
-	 *     .user(userInput)
-	 *     .call()
-	 *     .content();
+	 * The Spring Boot A2A server auto-configuration wraps this ChatClient to handle A2A protocol.
 	 *
-	 * The agent will receive requests via A2A protocol at http://localhost:10002/a2a
-	 * and respond with accommodation recommendations based on the system prompt.
+	 * The agent will:
+	 *   1. Receive A2A protocol requests at http://localhost:10002/a2a
+	 *   2. Execute using: chatClient.prompt().user(userInput).call().content()
+	 *   3. Return accommodation recommendations based on the system prompt
+	 *
+	 * No custom executors or adapters required!
 	 */
 }

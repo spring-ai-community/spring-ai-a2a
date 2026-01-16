@@ -23,36 +23,27 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springaicommunity.a2a.server.agentexecution.A2AExecutor;
 
 import java.util.List;
 
 /**
- * Travel Planning Agent Configuration - Non-intrusive builder-based approach.
+ * Travel Planning Agent Configuration - Simplified architecture.
  *
- * <p><strong>Demonstrates Key Patterns:</strong>
+ * <p><strong>Current Architecture (Simplified):</strong>
  * <ul>
- *   <li><strong>Builder API:</strong> No class inheritance required</li>
- *   <li><strong>Properties-based Configuration:</strong> Agent metadata configured via YAML</li>
- *   <li><strong>Auto-Configuration:</strong> Spring Boot starter handles DefaultA2AServer creation</li>
- *   <li><strong>Composition over Inheritance:</strong> Pure functional configuration</li>
- * </ul>
- *
- * <p><strong>Advantages Over Inheritance:</strong>
- * <ul>
- *   <li>No coupling to framework base classes</li>
- *   <li>Easier to test (inject mock ChatClient)</li>
- *   <li>Can compose with other configuration classes</li>
- *   <li>Clear separation: bean creation vs metadata configuration</li>
+ *   <li><strong>ChatClient with Tools:</strong> Register all tools (A2A, MCP, custom)</li>
+ *   <li><strong>A2A Server Auto-Configuration:</strong> Spring Boot auto-configures A2A endpoints</li>
+ *   <li><strong>Zero Configuration:</strong> Tools auto-injected, server handles A2A protocol</li>
+ *   <li><strong>No Custom Executors:</strong> Direct ChatClient usage, Spring AI handles execution</li>
  * </ul>
  *
  * <p><strong>How It Works:</strong>
  * <ol>
- *   <li>Properties loaded from application.yml</li>
- *   <li>{@link #travelPlanningAgent(ChatModel, List)} creates agent using builder</li>
- *   <li>Spring Boot auto-configuration detects A2AExecutor bean</li>
- *   <li>Auto-configuration creates AgentCard from properties</li>
- *   <li>Auto-configuration creates DefaultA2AServer automatically</li>
+ *   <li>Spring Boot auto-configuration detects ChatClient bean</li>
+ *   <li>A2A server controllers automatically wrap ChatClient for A2A protocol</li>
+ *   <li>All ToolCallback beans are auto-injected and registered</li>
+ *   <li>LLM decides when to call which tools</li>
+ *   <li>Spring AI handles recursive tool calling</li>
  * </ol>
  *
  * @author Ilayaperumal Gopinathan
@@ -64,37 +55,33 @@ public class TravelPlanningAgentConfiguration {
 	private static final Logger logger = LoggerFactory.getLogger(TravelPlanningAgentConfiguration.class);
 
 	/**
-	 * Create Travel Planning Agent using A2AExecutor builder pattern.
+	 * Create Travel Planning Agent ChatClient with all tools.
 	 *
-	 * <p>This demonstrates the <strong>builder-based</strong> approach:
+	 * <p>This demonstrates the <strong>simplified</strong> approach:
 	 * <ul>
-	 *   <li>No class inheritance required</li>
-	 *   <li>Declarative configuration using A2AExecutor.builder()</li>
-	 *   <li>ChatClient configured with all available tools via zero-config injection</li>
-	 *   <li>System prompt defines agent behavior and capabilities</li>
+	 *   <li>Just create a ChatClient with tools registered</li>
+	 *   <li>A2A server auto-configuration handles the rest</li>
+	 *   <li>No custom executors or adapters needed</li>
 	 * </ul>
 	 *
-	 * <p>All {@link ToolCallback} beans are automatically injected by Spring Boot,
-	 * providing zero-configuration tool integration for the agent.
+	 * <p>All {@link ToolCallback} beans are automatically injected by Spring Boot.
 	 *
 	 * @param chatModel the chat model for LLM interactions
-	 * @param toolCallbacks all available tools (A2A remote agents, MCP, custom, agent-utils)
-	 * @return the configured A2A executor
+	 * @param toolCallbacks all available tools (A2A remote agents, MCP, custom)
+	 * @return the configured ChatClient
 	 */
 	@Bean
-	public A2AExecutor travelPlanningAgent(ChatModel chatModel, List<ToolCallback> toolCallbacks) {
-		logger.info("Creating TravelPlanningAgent with {} tools:", toolCallbacks.size());
+	public ChatClient travelPlanningAgent(ChatModel chatModel, List<ToolCallback> toolCallbacks) {
+		logger.info("Creating Travel Planning Agent with {} tools:", toolCallbacks.size());
 		toolCallbacks.forEach(tool ->
 			logger.info("  • {} - {}",
 				tool.getToolDefinition().name(),
 				tool.getToolDefinition().description())
 		);
 
-		return A2AExecutor.builder()
-			.chatClient(ChatClient.builder(chatModel)
-				.defaultToolCallbacks(toolCallbacks)
-				.build())
-			.systemPrompt(getSystemPrompt())
+		return ChatClient.builder(chatModel)
+			.defaultToolCallbacks(toolCallbacks)
+			.defaultSystem(getSystemPrompt())
 			.build();
 	}
 
@@ -120,7 +107,6 @@ public class TravelPlanningAgentConfiguration {
 			- **A2AAgent**: Delegate complex tasks to remote specialized agents
 			  - Use with `subagent_type="accommodation"` for hotel and lodging recommendations
 			  - Independent service with expert accommodation knowledge
-			  - ~100-500ms overhead for HTTP communication
 
 			### 2. MCP Weather Tools (Direct Function Calls)
 			Standard MCP protocol tools for weather data:
@@ -254,53 +240,4 @@ public class TravelPlanningAgentConfiguration {
 			Focus on providing the best user experience by combining tool results with your knowledge!
 			""";
 	}
-
-	/*
-	 * NOTE: This configuration uses A2AExecutor.builder()'s default execution implementation.
-	 *
-	 * The builder creates an A2AExecutor that executes requests using:
-	 *   getChatClient().prompt()
-	 *     .system(getSystemPrompt())
-	 *     .user(userInput)
-	 *     .call()
-	 *     .content();
-	 *
-	 * Spring AI automatically:
-	 * - Makes all registered ToolCallback beans available to the LLM
-	 * - Handles tool calls when the LLM decides to use them
-	 * - Manages the recursive tool calling loop
-	 * - Synthesizes the final response
-	 *
-	 * ─────────────────────────────────────────────────────────────────────
-	 * ADVANCED: Custom Response Generation with Progress Updates
-	 * ─────────────────────────────────────────────────────────────────────
-	 *
-	 * If you need multi-step processing with progress updates, use:
-	 *
-	 * A2AExecutor.builder()
-	 *     .chatClient(chatClient)
-	 *     .systemPrompt(getSystemPrompt())
-	 *     .responseGenerator(userInput -> {
-	 *         // Phase 1: Analysis
-	 *         getTaskUpdater().updateSubAgent(TaskState.TASK_STATE_RUNNING,
-	 *             "Analyzing your travel request...");
-	 *
-	 *         // Phase 2: Information Gathering
-	 *         getTaskUpdater().updateSubAgent(TaskState.TASK_STATE_RUNNING,
-	 *             "Gathering weather and accommodation data...");
-	 *
-	 *         String response = getChatClient().prompt()
-	 *             .system(getSystemPrompt())
-	 *             .user(userInput)
-	 *             .call()
-	 *             .content();
-	 *
-	 *         // Phase 3: Synthesis
-	 *         getTaskUpdater().updateSubAgent(TaskState.TASK_STATE_RUNNING,
-	 *             "Creating your personalized itinerary...");
-	 *
-	 *         return List.of(new TextPart(response));
-	 *     })
-	 *     .build();
-	 */
 }

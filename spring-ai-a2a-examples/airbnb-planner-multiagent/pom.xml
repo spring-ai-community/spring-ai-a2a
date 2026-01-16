@@ -15,22 +15,43 @@
 	<packaging>pom</packaging>
 	<name>Airbnb Planner Multi-Agent Example</name>
 	<description>
-		Spring AI A2A multi-agent example demonstrating THREE integration patterns:
-		1. Local SubAgents (in-process ChatClient) - research, calculator
-		2. A2A Remote Agents (HTTP/A2A protocol) - accommodation
-		3. MCP Tools (stdio protocol) - weather
+		Comprehensive Spring AI A2A example demonstrating TWO orchestration patterns:
 
-		Features:
-		- Unified SubAgent delegation via auto-configuration
-		- Transparent routing (local vs remote)
-		- Simplified SpringAIAgentExecutor API
-		- Zero boilerplate agent development
-		- Configuration-driven setup (application.yml)
+		Pattern 1: LLM-Driven Orchestration (travel-planner-agent)
+		- LLM autonomously decides when to call agents
+		- A2A Remote Agents (HTTP/A2A protocol) - accommodation-agent
+		- MCP Tools (stdio protocol) - weather tools
+		- Uses A2AToolCallback for remote agent integration
+
+		Pattern 2: Programmatic Orchestration (direct-sdk-planner)
+		- Developer controls exactly when each agent is called
+		- Direct A2A Java SDK usage without ToolCallback wrapper
+		- Sequential coordination with explicit control flow
+		- No LLM orchestration costs
+
+		Agents:
+		- travel-planner-agent: LLM-driven orchestrator (port 8080)
+		- accommodation-agent: A2A remote agent (port 10002)
+		- weather-agent: A2A remote agent (port 10001)
+		- direct-sdk-planner: Programmatic orchestrator (port 8081)
 	</description>
 
 	<modules>
 		<module>travel-planner-agent</module>
 		<module>accommodation-agent</module>
+		<module>weather-agent</module>
+		<module>direct-sdk-planner</module>
 	</modules>
+
+	<dependencyManagement>
+		<dependencies>
+			<!-- Spring AI A2A Client for A2AToolCallback -->
+			<dependency>
+				<groupId>org.springaicommunity</groupId>
+				<artifactId>spring-ai-a2a-client</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 </project>

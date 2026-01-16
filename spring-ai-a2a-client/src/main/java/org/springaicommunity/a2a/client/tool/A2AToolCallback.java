@@ -18,16 +18,20 @@ package org.springaicommunity.a2a.client.tool;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.a2a.client.Client;
+import io.a2a.client.ClientEvent;
+import io.a2a.client.MessageEvent;
+import io.a2a.client.TaskEvent;
+import io.a2a.spec.AgentCard;
 import io.a2a.spec.Message;
 import io.a2a.spec.Part;
+import io.a2a.spec.TaskState;
 import io.a2a.spec.TextPart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.definition.DefaultToolDefinition;
 import org.springframework.ai.tool.definition.ToolDefinition;
-import org.springaicommunity.a2a.client.A2AClient;
-import org.springaicommunity.a2a.client.DefaultA2AClient;
 import org.springaicommunity.a2a.core.MessageUtils;
 
 import java.time.Duration;
@@ -38,6 +42,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 
 /**
  * Spring AI ToolCallback for delegating tasks to remote A2A agents via HTTP.
@@ -50,7 +58,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p><strong>Features:</strong>
  * <ul>
  *   <li>Direct remote agent invocation via A2A protocol</li>
- *   <li>Streaming response collection with progress tracking</li>
+ *   <li>Event-driven response handling (MessageEvent and TaskEvent)</li>
  *   <li>Synchronous and asynchronous execution modes</li>
  *   <li>Automatic client caching per agent URL</li>
  *   <li>Configurable timeouts per agent</li>
@@ -135,8 +143,6 @@ public class A2AToolCallback implements ToolCallback {
 
 	private final ObjectMapper objectMapper = new ObjectMapper();
 
-	private final ConcurrentHashMap<String, A2AClient> clients = new ConcurrentHashMap<>();
-
 	private final ConcurrentHashMap<String, CompletableFuture<String>> backgroundTasks = new ConcurrentHashMap<>();
 
 	/**
@@ -218,13 +224,11 @@ public class A2AToolCallback implements ToolCallback {
 						new IllegalArgumentException("Available agents: " + agentUrls.keySet()));
 			}
 
-			A2AClient client = getOrCreateClient(agentUrl);
-
 			if (params.isRunInBackground()) {
-				return executeBackground(client, params);
+				return executeBackground(agentUrl, params);
 			}
 			else {
-				return executeSynchronous(client, params);
+				return executeSynchronous(agentUrl, params);
 			}
 		}
 		catch (Exception e) {
@@ -236,20 +240,17 @@ public class A2AToolCallback implements ToolCallback {
 	/**
 	 * Execute task synchronously and wait for immediate response.
 	 *
-	 * <p>Uses the synchronous {@link A2AClient#sendMessage(Message)} method
-	 * to get an immediate response from the remote agent. Unlike background
-	 * execution, progress updates are not collected - only the final result
-	 * is returned.
+	 * <p>Uses the A2A SDK's event-driven API with a CountDownLatch to block until
+	 * the response is received. Handles both MessageEvent and TaskEvent responses.
 	 *
 	 * <p>This method blocks until the agent responds or the configured
 	 * timeout expires (default: 5 minutes).
 	 *
-	 * @param client the A2A client to use for execution
+	 * @param agentUrl the agent URL
 	 * @param params the task parameters including prompt and agent type
 	 * @return formatted result containing the agent's response
-	 * @see #executeBackground for async execution with progress tracking
 	 */
-	private String executeSynchronous(A2AClient client, TaskParams params) {
+	private String executeSynchronous(String agentUrl, TaskParams params) {
 		logger.info("Executing synchronous A2A task: {} (type: {})", params.description(), params.subagentType());
 
 		// Create A2A Message
@@ -258,20 +259,77 @@ public class A2AToolCallback implements ToolCallback {
 			.parts(List.of(new TextPart(params.prompt())))
 			.build();
 
-		// Use synchronous sendMessage() for immediate response
-		Message response = client.sendMessage(request);
+		// Use CountDownLatch to block until response is received
+		CountDownLatch latch = new CountDownLatch(1);
+		AtomicReference<Message> responseRef = new AtomicReference<>();
+		AtomicReference<Throwable> errorRef = new AtomicReference<>();
 
-		logger.info("A2A task completed: {} (status: {})", params.description(),
-				response != null ? "SUCCESS" : "FAILED");
+		// Create event consumer
+		BiConsumer<ClientEvent, AgentCard> consumer = (event, card) -> {
+			try {
+				if (event instanceof MessageEvent messageEvent) {
+					// Store the message directly
+					responseRef.set(messageEvent.getMessage());
+					latch.countDown();
+				}
+				else if (event instanceof TaskEvent taskEvent) {
+					// For task completion, extract message from artifacts
+					if (isTaskComplete(taskEvent)) {
+						Message response = extractMessageFromTaskEvent(taskEvent);
+						responseRef.set(response);
+						latch.countDown();
+					}
+				}
+			}
+			catch (Exception e) {
+				errorRef.set(e);
+				latch.countDown();
+			}
+		};
 
-		// Synchronous execution returns only final result without progress updates
-		return formatResult(params, List.of(), response);
+		// Create client with consumer
+		Client client = createClient(agentUrl, List.of(consumer));
+
+		// Send message
+		client.sendMessage(request);
+
+		// Wait for response with timeout
+		try {
+			boolean completed = latch.await(defaultTimeout.toSeconds(), TimeUnit.SECONDS);
+
+			if (!completed) {
+				throw new RuntimeException("Timeout waiting for A2A agent response after " + defaultTimeout);
+			}
+
+			if (errorRef.get() != null) {
+				throw new RuntimeException("Error during A2A execution", errorRef.get());
+			}
+
+			Message response = responseRef.get();
+			logger.info("A2A task completed: {} (status: {})", params.description(),
+					response != null ? "SUCCESS" : "FAILED");
+
+			// Synchronous execution returns only final result without progress updates
+			return formatResult(params, List.of(), response);
+		}
+		catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new RuntimeException("Interrupted while waiting for A2A response", e);
+		}
 	}
 
 	/**
 	 * Execute task in background and return task ID.
+	 *
+	 * <p>This method uses streaming execution to collect progress updates
+	 * from the remote agent. The task runs in a background CompletableFuture
+	 * and can be queried using the TaskOutput tool.
+	 *
+	 * @param agentUrl the agent URL
+	 * @param params the task parameters including prompt and agent type
+	 * @return formatted message with task ID for later retrieval
 	 */
-	private String executeBackground(A2AClient client, TaskParams params) {
+	private String executeBackground(String agentUrl, TaskParams params) {
 		String taskId = UUID.randomUUID().toString();
 
 		logger.info("Starting background A2A task: {} (id: {})", params.description(), taskId);
@@ -284,20 +342,50 @@ public class A2AToolCallback implements ToolCallback {
 				.build();
 
 			List<String> progressUpdates = new ArrayList<>();
-			Message finalResponse = null;
+			AtomicReference<Message> finalResponse = new AtomicReference<>();
+			CountDownLatch latch = new CountDownLatch(1);
 
-			for (Message message : client.streamMessage(request).toIterable()) {
-				// Collect all intermediate responses as progress updates
-				if (message != null && message.parts() != null) {
-					String text = MessageUtils.extractText(message.parts());
-					if (text != null) {
-						progressUpdates.add(text);
+			BiConsumer<ClientEvent, AgentCard> consumer = (event, card) -> {
+				try {
+					if (event instanceof MessageEvent messageEvent) {
+						String text = MessageUtils.extractText(messageEvent.getMessage().parts());
+						if (text != null) {
+							progressUpdates.add(text);
+						}
+						finalResponse.set(messageEvent.getMessage());
+						latch.countDown();
 					}
-					finalResponse = message; // Keep the latest response
+					else if (event instanceof TaskEvent taskEvent) {
+						if (isTaskComplete(taskEvent)) {
+							Message response = extractMessageFromTaskEvent(taskEvent);
+							String text = MessageUtils.extractText(response.parts());
+							if (text != null) {
+								progressUpdates.add(text);
+							}
+							finalResponse.set(response);
+							latch.countDown();
+						}
+					}
 				}
+				catch (Exception e) {
+					logger.error("Error processing event", e);
+				}
+			};
+
+			// Create client with consumer
+			Client client = createClient(agentUrl, List.of(consumer));
+
+			// Send message
+			client.sendMessage(request);
+
+			try {
+				latch.await(defaultTimeout.toSeconds(), TimeUnit.SECONDS);
+			}
+			catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
 			}
 
-			return formatResult(params, progressUpdates, finalResponse);
+			return formatResult(params, progressUpdates, finalResponse.get());
 		});
 
 		backgroundTasks.put(taskId, future);
@@ -374,15 +462,61 @@ public class A2AToolCallback implements ToolCallback {
 	}
 
 	/**
-	 * Get or create A2A client for the given URL (cached).
+	 * Create A2A SDK client for the given URL with event consumers.
+	 *
+	 * <p>Note: Clients cannot be cached because consumers must be registered
+	 * at build time. Each invocation needs its own client with its own consumers.
 	 */
-	private A2AClient getOrCreateClient(String agentUrl) {
-		return clients.computeIfAbsent(agentUrl, url ->
-			DefaultA2AClient.builder()
-				.agentUrl(url)
-				.timeout(defaultTimeout)
-				.build()
-		);
+	private Client createClient(String agentUrl, List<BiConsumer<ClientEvent, AgentCard>> consumers) {
+		// Create AgentCard for the URL
+		AgentCard agentCard = AgentCard.builder()
+			.name("Remote Agent")
+			.description("Remote A2A agent")
+			.version("1.0.0")
+			.protocolVersion("0.1.0")
+			.supportedInterfaces(List.of(new io.a2a.spec.AgentInterface("JSONRPC", agentUrl)))
+			.build();
+
+		// Configure for synchronous mode
+		io.a2a.client.config.ClientConfig clientConfig = new io.a2a.client.config.ClientConfig.Builder()
+			.setStreaming(false)
+			.setAcceptedOutputModes(List.of("text"))
+			.build();
+
+		// Build client with consumers
+		return Client.builder(agentCard)
+			.clientConfig(clientConfig)
+			.withTransport(io.a2a.client.transport.jsonrpc.JSONRPCTransport.class,
+				new io.a2a.client.transport.jsonrpc.JSONRPCTransportConfig())
+			.addConsumers(consumers)
+			.build();
+	}
+
+	/**
+	 * Check if a TaskEvent represents a completed task.
+	 */
+	private boolean isTaskComplete(TaskEvent taskEvent) {
+		TaskState state = taskEvent.getTask().status().state();
+		return state == TaskState.COMPLETED || state == TaskState.FAILED || state == TaskState.CANCELED;
+	}
+
+	/**
+	 * Extract message from TaskEvent artifacts.
+	 */
+	private Message extractMessageFromTaskEvent(TaskEvent taskEvent) {
+		if (taskEvent.getTask().artifacts() == null || taskEvent.getTask().artifacts().isEmpty()) {
+			return Message.builder()
+				.role(Message.Role.AGENT)
+				.parts(List.of(new TextPart("Task completed but no artifacts found")))
+				.build();
+		}
+
+		// Extract text from first artifact
+		List<Part<?>> parts = taskEvent.getTask().artifacts().get(0).parts();
+		return Message.builder()
+			.role(Message.Role.AGENT)
+			.parts(parts)
+			.build();
 	}
 
 	/**

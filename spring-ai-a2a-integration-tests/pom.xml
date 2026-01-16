@@ -25,6 +25,10 @@
 			<groupId>org.springaicommunity</groupId>
 			<artifactId>spring-ai-a2a-server</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>org.springaicommunity</groupId>
+			<artifactId>spring-ai-a2a-client</artifactId>
+		</dependency>
 
 		<!-- Spring AI OpenAI (for optional ChatClient with OpenAI) -->
 		<dependency>

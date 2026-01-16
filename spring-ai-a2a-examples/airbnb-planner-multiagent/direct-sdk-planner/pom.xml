@@ -7,15 +7,15 @@
 
 	<parent>
 		<groupId>org.springaicommunity</groupId>
-		<artifactId>airbnb-planner-multiagent</artifactId>
+		<artifactId>spring-ai-a2a-examples</artifactId>
 		<version>0.1.0-SNAPSHOT</version>
 	</parent>
 
-	<artifactId>accommodation-agent</artifactId>
-	<name>Accommodation Agent (A2A Remote Agent Example)</name>
+	<artifactId>airbnb-direct-sdk-example</artifactId>
+	<name>Airbnb Direct SDK Example</name>
 	<description>
-		Specialized A2A remote agent for accommodation booking and recommendations.
-		Demonstrates A2A protocol integration pattern as a remote agent.
+		Demonstrates direct A2A Java SDK usage without A2AToolCallback wrapper.
+		Shows how to coordinate with remote A2A agents using the SDK's event-driven API directly.
 	</description>
 
 	<dependencies>
@@ -25,16 +25,17 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
-		<!-- Spring AI A2A Server -->
+		<!-- A2A Client - for A2AClientUtils only -->
 		<dependency>
 			<groupId>org.springaicommunity</groupId>
-			<artifactId>spring-ai-a2a-server</artifactId>
+			<artifactId>spring-ai-a2a-client</artifactId>
+			<version>${project.version}</version>
 		</dependency>
 
-		<!-- Spring AI OpenAI for LLM -->
+		<!-- A2A Java SDK (transitive from client, listed for clarity) -->
 		<dependency>
-			<groupId>org.springframework.ai</groupId>
-			<artifactId>spring-ai-starter-model-openai</artifactId>
+			<groupId>io.github.a2asdk</groupId>
+			<artifactId>a2a-java-sdk-client</artifactId>
 		</dependency>
 	</dependencies>
 

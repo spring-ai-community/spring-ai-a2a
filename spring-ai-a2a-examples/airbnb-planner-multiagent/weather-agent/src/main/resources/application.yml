@@ -1,0 +1,36 @@
+# Weather Agent Configuration
+
+server:
+  port: 10001
+
+# Spring AI A2A Server Configuration
+spring:
+  application:
+    name: weather-agent
+  ai:
+    a2a:
+      server:
+        enabled: true
+        base-path: /a2a
+      agent:
+        name: "Weather Agent"
+        description: "Provides weather forecasts, climate information, and travel weather planning advice for any location and date"
+        version: "1.0.0"
+        protocol-version: "0.1.0"
+        capabilities:
+          streaming: false
+          push-notifications: false
+          state-transition-history: false
+        default-input-modes:
+          - text
+        default-output-modes:
+          - text
+        supported-interfaces:
+          - type: JSONRPC
+            url: http://localhost:10001/a2a
+
+# Logging
+logging:
+  level:
+    org.springaicommunity.a2a: INFO
+    org.springframework.ai: INFO
