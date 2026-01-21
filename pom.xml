@@ -36,10 +36,9 @@
 	</scm>
 
 	<modules>
-		<module>spring-ai-a2a-utils</module>
 		<module>spring-ai-a2a-server</module>
+		<module>spring-ai-a2a-server-autoconfigure</module>
 		<module>spring-ai-a2a-examples</module>
-		<module>spring-ai-a2a-integration-tests</module>
 	</modules>
 
 	<properties>
@@ -53,7 +52,7 @@
 		<spring-ai.version>2.0.0-M1</spring-ai.version>
 
 		<!-- A2A Java SDK version -->
-		<a2a-java-sdk.version>0.4.0.Alpha1-SNAPSHOT</a2a-java-sdk.version>
+		<a2a-java-sdk.version>0.3.3.Final</a2a-java-sdk.version>
 
 		<!-- Plugin versions -->
 		<maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
@@ -117,12 +116,12 @@
 		<!-- Spring AI A2A modules -->
 			<dependency>
 				<groupId>org.springaicommunity</groupId>
-				<artifactId>spring-ai-a2a-utils</artifactId>
+				<artifactId>spring-ai-a2a-server</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springaicommunity</groupId>
-				<artifactId>spring-ai-a2a-server</artifactId>
+				<artifactId>spring-ai-a2a-server-autoconfigure</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 		</dependencies>

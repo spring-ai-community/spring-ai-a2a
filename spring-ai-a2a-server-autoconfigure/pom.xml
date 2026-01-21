@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+		 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>org.springaicommunity</groupId>
+		<artifactId>spring-ai-a2a-parent</artifactId>
+		<version>0.1.0-SNAPSHOT</version>
+	</parent>
+
+	<artifactId>spring-ai-a2a-server-autoconfigure</artifactId>
+	<name>Spring AI A2A Server Auto-Configuration</name>
+	<description>Spring Boot auto-configuration for Spring AI A2A Server</description>
+
+	<dependencies>
+		<!-- Spring AI A2A Server (the actual implementation) -->
+		<dependency>
+			<groupId>org.springaicommunity</groupId>
+			<artifactId>spring-ai-a2a-server</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<!-- Spring AI Chat Client (for @ConditionalOnClass) -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-client-chat</artifactId>
+			<optional>true</optional>
+		</dependency>
+
+		<!-- Spring Boot Autoconfigure -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-autoconfigure</artifactId>
+		</dependency>
+
+		<!-- Spring Boot Configuration Processor (for @ConfigurationProperties) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-configuration-processor</artifactId>
+			<optional>true</optional>
+		</dependency>
+
+		<!-- Test Dependencies -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Spring Boot Web Starter (needed for embedded server in tests) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Spring AI OpenAI for testing -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-model-openai</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+</project>

@@ -33,8 +33,8 @@ spring:
 # Logging Configuration
 logging:
   level:
-    org.springaicommunity.a2a: DEBUG
-    org.springframework.ai.chat.client: DEBUG
+    org.springaicommunity.a2a: INFO
+    org.springframework.ai.chat.client: INFO
     io.a2a: INFO
   pattern:
     console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

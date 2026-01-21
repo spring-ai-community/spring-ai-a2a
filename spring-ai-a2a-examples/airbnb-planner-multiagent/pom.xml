@@ -15,32 +15,23 @@
 	<packaging>pom</packaging>
 	<name>Airbnb Planner Multi-Agent Example</name>
 	<description>
-		Comprehensive Spring AI A2A example demonstrating TWO orchestration patterns:
+		Spring AI A2A example demonstrating server-side A2A agents and client coordination:
 
-		Pattern 1: LLM-Driven Orchestration (travel-planner-agent)
-		- LLM autonomously decides when to call agents
-		- A2A Remote Agents (HTTP/A2A protocol) - accommodation-agent
-		- MCP Tools (stdio protocol) - weather tools
-		- Uses A2AToolCallback for remote agent integration
+		Server-side A2A Agents (using spring-ai-a2a-server):
+		- accommodation-agent: Hotel recommendations agent (port 10002)
+		- weather-agent: Weather forecasting agent (port 10001)
 
-		Pattern 2: Programmatic Orchestration (direct-sdk-planner)
-		- Developer controls exactly when each agent is called
-		- Direct A2A Java SDK usage without ToolCallback wrapper
-		- Sequential coordination with explicit control flow
-		- No LLM orchestration costs
-
-		Agents:
-		- travel-planner-agent: LLM-driven orchestrator (port 8080)
-		- accommodation-agent: A2A remote agent (port 10002)
-		- weather-agent: A2A remote agent (port 10001)
-		- direct-sdk-planner: Programmatic orchestrator (port 8081)
+		Client (using A2A Java SDK directly):
+		- travel-planner: REST API that coordinates with remote A2A agents (port 8080)
+		  • Uses A2A Java SDK to call remote agents programmatically
+		  • No LLM orchestration - explicit coordination logic
+		  • Demonstrates pure client-side A2A SDK usage
 	</description>
 
 	<modules>
-		<module>travel-planner-agent</module>
+		<module>travel-planner</module>
 		<module>accommodation-agent</module>
 		<module>weather-agent</module>
-		<module>direct-sdk-planner</module>
 	</modules>
 
 

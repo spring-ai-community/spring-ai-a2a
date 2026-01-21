@@ -1,0 +1,86 @@
+/*
+ * Copyright 2025-2026 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.springaicommunity.a2a.server.autoconfigure;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+/**
+ * Configuration properties for Spring AI A2A Server.
+ *
+ * <p>These properties allow customization of basic A2A server behavior.
+ * For advanced customization (TaskStore, ConfigProvider), provide custom beans
+ * in a @Configuration class.
+ *
+ * <p><strong>Example configuration:</strong>
+ * <pre>
+ * spring:
+ *   ai:
+ *     a2a:
+ *       server:
+ *         enabled: true
+ *         base-path: /a2a
+ * </pre>
+ *
+ * <p><strong>Custom TaskStore/ConfigProvider:</strong>
+ * <pre>
+ * &#64;Configuration
+ * public class CustomA2AConfiguration {
+ *     &#64;Bean
+ *     public TaskStore taskStore() {
+ *         return new RedisTaskStore();
+ *     }
+ *
+ *     &#64;Bean
+ *     public A2AConfigProvider configProvider() {
+ *         return new CustomConfigProvider();
+ *     }
+ * }
+ * </pre>
+ *
+ * @author Ilayaperumal Gopinathan
+ * @since 0.1.0
+ */
+@ConfigurationProperties(prefix = "spring.ai.a2a.server")
+public class A2AServerProperties {
+
+	/**
+	 * Whether the A2A server is enabled.
+	 */
+	private boolean enabled = true;
+
+	/**
+	 * Base path for A2A endpoints.
+	 */
+	private String basePath = "/a2a";
+
+	public boolean isEnabled() {
+		return enabled;
+	}
+
+	public void setEnabled(boolean enabled) {
+		this.enabled = enabled;
+	}
+
+	public String getBasePath() {
+		return basePath;
+	}
+
+	public void setBasePath(String basePath) {
+		this.basePath = basePath;
+	}
+
+}
