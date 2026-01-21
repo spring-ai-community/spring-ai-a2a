@@ -1,0 +1,183 @@
+/*
+ * Copyright 2025-2026 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.springaicommunity.a2a.server.controller;
+
+import io.a2a.server.ServerCallContext;
+import io.a2a.server.requesthandlers.RequestHandler;
+import io.a2a.spec.JSONRPCError;
+import io.a2a.spec.Task;
+import io.a2a.spec.TaskIdParams;
+import io.a2a.spec.TaskQueryParams;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * REST controller for handling A2A task operations.
+ *
+ * <p>This controller implements the A2A protocol endpoints for task management.
+ * It acts as a thin adapter between REST and the A2A SDK's {@link RequestHandler}.
+ *
+ * <p><strong>Endpoints:</strong>
+ * <ul>
+ *   <li>{@code GET ${spring.ai.a2a.server.base-path:/a2a}/tasks/{taskId}} - Get task status</li>
+ *   <li>{@code POST ${spring.ai.a2a.server.base-path:/a2a}/tasks/{taskId}/cancel} - Cancel a task</li>
+ * </ul>
+ *
+ * <p><strong>Task Lifecycle:</strong>
+ * <pre>
+ * SUBMITTED → WORKING → COMPLETED
+ *                  ↓
+ *               CANCELLED
+ *                  ↓
+ *                FAILED
+ * </pre>
+ *
+ * <p><strong>Get Task Example:</strong>
+ * <pre>
+ * GET /a2a/tasks/task-123
+ *
+ * Response:
+ * {
+ *   "id": "task-123",
+ *   "status": {
+ *     "state": "COMPLETED"
+ *   },
+ *   "artifacts": [{
+ *     "parts": [{"type": "text", "text": "Task result"}]
+ *   }]
+ * }
+ * </pre>
+ *
+ * <p><strong>Cancel Task Example:</strong>
+ * <pre>
+ * POST /a2a/tasks/task-123/cancel
+ *
+ * Response:
+ * {
+ *   "id": "task-123",
+ *   "status": {
+ *     "state": "CANCELLED"
+ *   }
+ * }
+ * </pre>
+ *
+ * @author Ilayaperumal Gopinathan
+ * @since 0.1.0
+ * @see RequestHandler
+ * @see Task
+ */
+@RestController
+@RequestMapping("${spring.ai.a2a.server.base-path:/a2a}/tasks")
+public class TaskController {
+
+	private static final Logger logger = LoggerFactory.getLogger(TaskController.class);
+
+	private final RequestHandler requestHandler;
+
+	/**
+	 * Create a new TaskController.
+	 *
+	 * @param requestHandler the A2A SDK request handler
+	 */
+	public TaskController(RequestHandler requestHandler) {
+		this.requestHandler = requestHandler;
+	}
+
+	/**
+	 * Retrieve the status and results of a specific task.
+	 *
+	 * <p>This endpoint allows clients to query task status for long-running operations.
+	 * The response includes the task state, any artifacts produced, and error information
+	 * if the task failed.
+	 *
+	 * @param taskId the task identifier
+	 * @return the task object
+	 * @throws JSONRPCError if the task is not found or an error occurs
+	 */
+	@GetMapping(
+		path = "/{taskId}",
+		produces = MediaType.APPLICATION_JSON_VALUE
+	)
+	public Task getTask(@PathVariable String taskId) throws JSONRPCError {
+		logger.info("Getting task: {}", taskId);
+
+		try {
+			ServerCallContext context = new ServerCallContext(null, Map.of(), Set.of());
+			TaskQueryParams params = new TaskQueryParams(taskId);
+
+			Task task = requestHandler.onGetTask(params, context);
+			logger.info("Task retrieved: {} - state: {}", taskId, task.getStatus().state());
+			return task;
+		}
+		catch (JSONRPCError e) {
+			logger.error("Error getting task: {}", taskId, e);
+			throw e;
+		}
+		catch (Exception e) {
+			logger.error("Unexpected error getting task: {}", taskId, e);
+			throw new JSONRPCError(-32603, "Internal error: " + e.getMessage(), null);
+		}
+	}
+
+	/**
+	 * Cancel a running task.
+	 *
+	 * <p>This endpoint allows clients to request cancellation of a long-running task.
+	 * Note that cancellation is cooperative - the AgentExecutor must check for cancellation
+	 * and stop work appropriately.
+	 *
+	 * <p>Tasks that are already completed or failed cannot be cancelled.
+	 *
+	 * @param taskId the task identifier
+	 * @return the updated task object with CANCELLED state
+	 * @throws JSONRPCError if the task is not found or cannot be cancelled
+	 */
+	@PostMapping(
+		path = "/{taskId}/cancel",
+		produces = MediaType.APPLICATION_JSON_VALUE
+	)
+	public Task cancelTask(@PathVariable String taskId) throws JSONRPCError {
+		logger.info("Cancelling task: {}", taskId);
+
+		try {
+			ServerCallContext context = new ServerCallContext(null, Map.of(), Set.of());
+			TaskIdParams params = new TaskIdParams(taskId);
+
+			Task task = requestHandler.onCancelTask(params, context);
+			logger.info("Task cancelled: {}", taskId);
+			return task;
+		}
+		catch (JSONRPCError e) {
+			logger.error("Error cancelling task: {}", taskId, e);
+			throw e;
+		}
+		catch (Exception e) {
+			logger.error("Unexpected error cancelling task: {}", taskId, e);
+			throw new JSONRPCError(-32603, "Internal error: " + e.getMessage(), null);
+		}
+	}
+
+}

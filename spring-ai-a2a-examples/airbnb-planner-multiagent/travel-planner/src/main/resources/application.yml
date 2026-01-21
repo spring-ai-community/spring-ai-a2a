@@ -1,0 +1,25 @@
+# Direct SDK Travel Planner Example Configuration
+
+server:
+  port: 8080
+
+# A2A Server Configuration
+spring:
+  ai:
+    a2a:
+      server:
+        enabled: true
+        base-path: /a2a
+    openai:
+      api-key: ${OPENAI_API_KEY}
+
+# Remote A2A Agent URLs (comma-separated for @Value injection)
+remote:
+  agents:
+    urls: http://localhost:10001,http://localhost:10002
+
+# Logging
+logging:
+  level:
+    org.springaicommunity.a2a.examples.directsdk: INFO
+    io.a2a: INFO

@@ -16,12 +16,6 @@
 	<description>Server implementation for Spring AI A2A protocol support</description>
 
 	<dependencies>
-		<!-- Spring AI A2A Utils -->
-		<dependency>
-			<groupId>org.springaicommunity</groupId>
-			<artifactId>spring-ai-a2a-utils</artifactId>
-		</dependency>
-
 		<!-- A2A Java SDK -->
 		<dependency>
 			<groupId>io.github.a2asdk</groupId>

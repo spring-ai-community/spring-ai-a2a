@@ -11,11 +11,11 @@
 		<version>0.1.0-SNAPSHOT</version>
 	</parent>
 
-	<artifactId>weather-agent</artifactId>
-	<name>Weather Agent (A2A Remote Agent Example)</name>
+	<artifactId>travel-planner</artifactId>
+	<name>Travel Planner (A2A Client Example)</name>
 	<description>
-		Specialized A2A remote agent for weather forecasting and climate information.
-		Demonstrates A2A protocol integration pattern as a remote agent.
+		Demonstrates how to use A2A Java SDK to call remote A2A agents.
+		Shows coordinating with multiple remote agents (weather, accommodation) programmatically.
 	</description>
 
 	<dependencies>
@@ -35,6 +35,18 @@
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-starter-model-openai</artifactId>
+		</dependency>
+
+		<!-- Spring AI Chat Client (for ChatClient API) -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-client-chat</artifactId>
+		</dependency>
+
+		<!-- A2A Java SDK -->
+		<dependency>
+			<groupId>io.github.a2asdk</groupId>
+			<artifactId>a2a-java-sdk-client</artifactId>
 		</dependency>
 	</dependencies>
 

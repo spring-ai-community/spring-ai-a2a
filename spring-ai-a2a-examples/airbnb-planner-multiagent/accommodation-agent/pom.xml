@@ -25,10 +25,10 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
-		<!-- Spring AI A2A Server -->
+		<!-- Spring AI A2A Server Auto-Configuration -->
 		<dependency>
 			<groupId>org.springaicommunity</groupId>
-			<artifactId>spring-ai-a2a-server</artifactId>
+			<artifactId>spring-ai-a2a-server-autoconfigure</artifactId>
 		</dependency>
 
 		<!-- Spring AI OpenAI for LLM -->
