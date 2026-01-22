@@ -89,7 +89,14 @@ public class RemoteAgentConnections {
 
 ### 2. Specialized Agents (Weather & Accommodation)
 
-**Pattern**: Simple agents using `DefaultChatClientAgentExecutor` with domain-specific tools
+**Pattern**: Zero-config agents using ChatClientExecutor pattern with domain-specific tools
+
+Agents provide:
+- `AgentCard` bean (agent metadata)
+- `ChatClient` bean (with tools configured)
+- `ChatClientExecutor` bean (optional - for custom execution logic)
+
+Auto-configuration creates `DefaultA2AChatClientAgentExecutor` bridging A2A protocol to your ChatClient.
 
 **How it works**:
 ```java
@@ -136,7 +143,17 @@ public class WeatherAgentApplication {
             .build();
     }
 
-    // Note: AgentExecutor is auto-configured from ChatClient bean
+    // Optional: Provide custom ChatClientExecutor for custom execution logic
+    @Bean
+    public ChatClientExecutor chatClientExecutor() {
+        return (chatClient, userMessage, context) -> chatClient.prompt()
+            .user(userMessage)
+            .toolContext(context)
+            .call()
+            .content();
+    }
+
+    // Note: AgentExecutor (DefaultA2AChatClientAgentExecutor) is auto-configured
 }
 ```
 

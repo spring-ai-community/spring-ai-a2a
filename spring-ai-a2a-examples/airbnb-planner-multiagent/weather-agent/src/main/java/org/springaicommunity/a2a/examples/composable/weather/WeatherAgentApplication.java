@@ -23,14 +23,15 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springaicommunity.chatclient.executor.ChatClientExecutor;
 
 import java.util.List;
 
 /**
  * Weather Agent - A specialized A2A agent for weather forecasting.
  *
- * <p>Demonstrates minimal-configuration A2A agent setup. Provides AgentCard
- * and ChatClient beans, auto-configuration handles the rest.
+ * <p>Demonstrates ChatClientExecutor pattern for custom execution logic.
+ * Provides AgentCard, ChatClient, and ChatClientExecutor beans.
  *
  * @author Ilayaperumal Gopinathan
  * @since 0.1.0
@@ -70,13 +71,30 @@ public class WeatherAgentApplication {
 	}
 
 	/**
-	 * Create ChatClient with weather tools.
+	 * Create ChatClient with weather tools and system prompt.
 	 */
 	@Bean
 	public ChatClient weatherChatClient(ChatClient.Builder chatClientBuilder, WeatherTools weatherTools) {
 		return chatClientBuilder.clone()
+			.defaultSystem("You are a specialized weather forecast assistant. " +
+					"Use the provided tools to retrieve accurate weather information.")
 			.defaultTools(weatherTools)
 			.build();
+	}
+
+	/**
+	 * Define custom ChatClientExecutor with protocol-agnostic execution logic.
+	 *
+	 * <p>This executor receives the user message directly (no protocol coupling).
+	 * Auto-configuration will use this executor to create the AgentExecutor.
+	 */
+	@Bean
+	public ChatClientExecutor chatClientExecutor() {
+		return (chatClient, userMessage, context) -> chatClient.prompt()
+			.user(userMessage)
+			.toolContext(context)
+			.call()
+			.content();
 	}
 
 }

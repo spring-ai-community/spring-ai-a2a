@@ -36,6 +36,7 @@
 	</scm>
 
 	<modules>
+		<module>spring-ai-chatclient-utils</module>
 		<module>spring-ai-a2a-server</module>
 		<module>spring-ai-a2a-server-autoconfigure</module>
 		<module>spring-ai-a2a-examples</module>
@@ -114,6 +115,11 @@
 		</dependency>
 
 		<!-- Spring AI A2A modules -->
+			<dependency>
+				<groupId>org.springaicommunity</groupId>
+				<artifactId>spring-ai-chatclient-utils</artifactId>
+				<version>${project.version}</version>
+			</dependency>
 			<dependency>
 				<groupId>org.springaicommunity</groupId>
 				<artifactId>spring-ai-a2a-server</artifactId>

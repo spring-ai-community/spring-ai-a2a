@@ -14,38 +14,43 @@
  * limitations under the License.
  */
 
-package org.springaicommunity.a2a.server.executor;
+package org.springaicommunity.chatclient.executor;
 
 import org.springframework.ai.chat.client.ChatClient;
 import reactor.core.publisher.Flux;
 
 import java.util.Map;
-import java.util.function.BiFunction;
 
 /**
- * Executes ChatClient operations with context variables.
+ * Executes ChatClient operations with user message and context.
+ * Protocol-agnostic interface for Spring AI business logic.
  *
  * @author Ilayaperumal Gopinathan
  * @since 0.1.0
  */
 @FunctionalInterface
-public interface ChatClientExecutor extends BiFunction<ChatClient, Map<String, Object>, String> {
+public interface ChatClientExecutor {
 
 	/**
 	 * Execute and return response.
+	 *
+	 * @param chatClient the Spring AI ChatClient
+	 * @param userMessage the user's message text (extracted from protocol layer)
+	 * @param context execution context (protocol-agnostic)
+	 * @return the response text
 	 */
-	String execute(ChatClient chatClient, Map<String, Object> context);
+	String execute(ChatClient chatClient, String userMessage, Map<String, Object> context);
 
 	/**
 	 * Execute with streaming (default: wraps synchronous execution).
+	 *
+	 * @param chatClient the Spring AI ChatClient
+	 * @param userMessage the user's message text
+	 * @param context execution context
+	 * @return flux of response chunks
 	 */
-	default Flux<String> executeStream(ChatClient chatClient, Map<String, Object> context) {
-		return Flux.just(execute(chatClient, context));
-	}
-
-	@Override
-	default String apply(ChatClient chatClient, Map<String, Object> context) {
-		return execute(chatClient, context);
+	default Flux<String> executeStream(ChatClient chatClient, String userMessage, Map<String, Object> context) {
+		return Flux.just(execute(chatClient, userMessage, context));
 	}
 
 }

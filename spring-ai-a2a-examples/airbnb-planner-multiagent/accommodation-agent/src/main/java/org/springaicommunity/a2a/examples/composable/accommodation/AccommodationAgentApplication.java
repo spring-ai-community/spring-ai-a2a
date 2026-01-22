@@ -18,19 +18,21 @@ package org.springaicommunity.a2a.examples.composable.accommodation;
 
 import java.util.List;
 
-import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.spec.AgentCapabilities;
 import io.a2a.spec.AgentCard;
-import io.a2a.spec.AgentSkill;
+import io.a2a.spec.AgentInterface;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
-import org.springaicommunity.a2a.server.executor.DefaultChatClientAgentExecutor;
+import org.springaicommunity.chatclient.executor.ChatClientExecutor;
 
 /**
  * Accommodation Agent - A specialized A2A agent for accommodation search and recommendations.
+ *
+ * <p>Demonstrates ChatClientExecutor pattern for custom execution logic.
+ * Provides AgentCard, ChatClient, and ChatClientExecutor beans.
  *
  * @author Ilayaperumal Gopinathan
  * @since 0.1.0
@@ -49,34 +51,59 @@ public class AccommodationAgentApplication {
 		SpringApplication.run(AccommodationAgentApplication.class, args);
 	}
 
+	/**
+	 * Define AgentCard metadata for this agent.
+	 */
 	@Bean
 	public AgentCard agentCard() {
-		return new AgentCard.Builder().name("Accommodation Agent")
-			.description("Helps with searching accommodations, hotels, and lodging")
-			.url("http://localhost:10002/a2a")
-			.version("1.0.0")
-			.capabilities(new AgentCapabilities.Builder().streaming(false).build())
-			.defaultInputModes(List.of("text"))
-			.defaultOutputModes(List.of("text"))
-			.skills(List.of(new AgentSkill.Builder().id("accommodation_search")
-				.name("Search accommodation")
-				.description("Helps with accommodation search including hotels, Airbnb, and other lodging options")
-				.tags(List.of("accommodation", "hotels", "airbnb"))
-				.examples(List.of("Find a hotel in Paris for 3 nights", "Search for accommodation in New York"))
-				.build()))
-			.protocolVersion("0.3.0")
-			.build();
+		return new AgentCard(
+			"Accommodation Agent",
+			"Helps with searching accommodations, hotels, and lodging",
+			"http://localhost:10002/a2a",
+			null,
+			"1.0.0",
+			null,
+			new AgentCapabilities(false, false, false, List.of()),
+			List.of("text"),
+			List.of("text"),
+			List.of(),
+			false,
+			null,
+			null,
+			null,
+			List.of(new AgentInterface("JSONRPC", "http://localhost:10002/a2a")),
+			"JSONRPC",
+			"0.3.0",
+			null
+		);
 	}
 
+	/**
+	 * Create ChatClient with accommodation tools and system prompt.
+	 */
 	@Bean
-	public AgentExecutor agentExecutor(ChatClient.Builder chatClientBuilder, AccommodationTools accommodationTools) {
+	public ChatClient accommodationChatClient(ChatClient.Builder chatClientBuilder,
+			AccommodationTools accommodationTools) {
 
-		ChatClient chatClient = chatClientBuilder.clone()
+		return chatClientBuilder.clone()
 			.defaultSystem(ACCOMMODATION_SYSTEM_INSTRUCTION)
 			.defaultTools(accommodationTools)
 			.build();
+	}
 
-		return new DefaultChatClientAgentExecutor(chatClient);
+	/**
+	 * Define custom ChatClientExecutor with protocol-agnostic execution logic.
+	 *
+	 * <p>This executor receives the user message directly (no protocol coupling).
+	 * Auto-configuration will use this executor to create the AgentExecutor.
+	 */
+	@Bean
+	public ChatClientExecutor chatClientExecutor() {
+		return (chatClient, userMessage, context) -> chatClient.prompt()
+			.user(userMessage)
+			.toolContext(context)
+			.call()
+			.content();
 	}
 
 }

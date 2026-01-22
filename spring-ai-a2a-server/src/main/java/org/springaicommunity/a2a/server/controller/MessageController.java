@@ -81,6 +81,7 @@ import java.util.Set;
  * </pre>
  *
  * @author Ilayaperumal Gopinathan
+ * @author Christian Tzolov
  * @since 0.1.0
  * @see RequestHandler
  * @see io.a2a.server.agentexecution.AgentExecutor

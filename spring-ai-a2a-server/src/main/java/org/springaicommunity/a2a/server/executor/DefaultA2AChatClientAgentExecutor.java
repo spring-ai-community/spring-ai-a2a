@@ -26,43 +26,34 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springaicommunity.a2a.server.util.A2AContext;
+import org.springaicommunity.chatclient.executor.ChatClientExecutor;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Default AgentExecutor implementation using ChatClientExecutor pattern.
- * Bridges Spring AI ChatClient to A2A protocol with pluggable execution logic.
+ * A2A-specific AgentExecutor that bridges A2A protocol to protocol-agnostic ChatClientExecutor.
+ * Extracts user message from A2A RequestContext and delegates execution to ChatClientExecutor.
  *
  * @author Ilayaperumal Gopinathan
  * @since 0.1.0
  */
-public class DefaultChatClientAgentExecutor implements AgentExecutor {
+public class DefaultA2AChatClientAgentExecutor implements AgentExecutor {
 
-	private static final Logger logger = LoggerFactory.getLogger(DefaultChatClientAgentExecutor.class);
-
-	private static final ChatClientExecutor DEFAULT_EXECUTOR = (chatClient, context) -> chatClient.prompt()
-			.user(A2AContext.getUserMessage(context))
-			.toolContext(context)
-			.call()
-			.content();
+	private static final Logger logger = LoggerFactory.getLogger(DefaultA2AChatClientAgentExecutor.class);
 
 	private final ChatClient chatClient;
 
 	private final ChatClientExecutor executor;
 
 	/**
-	 * Create executor with ChatClient (uses default execution logic).
+	 * Create A2A executor with ChatClient and custom execution logic.
+	 *
+	 * @param chatClient the Spring AI ChatClient
+	 * @param executor the protocol-agnostic ChatClientExecutor
 	 */
-	public DefaultChatClientAgentExecutor(ChatClient chatClient) {
-		this(chatClient, DEFAULT_EXECUTOR);
-	}
-
-	/**
-	 * Create executor with custom execution logic.
-	 */
-	public DefaultChatClientAgentExecutor(ChatClient chatClient, ChatClientExecutor executor) {
+	public DefaultA2AChatClientAgentExecutor(ChatClient chatClient, ChatClientExecutor executor) {
 		this.chatClient = chatClient;
 		this.executor = executor;
 	}
@@ -80,10 +71,13 @@ public class DefaultChatClientAgentExecutor implements AgentExecutor {
 			// Build execution context from A2A RequestContext
 			Map<String, Object> executionContext = buildExecutionContext(context);
 
-			logger.debug("Executing task for user message: {}", A2AContext.getUserMessage(executionContext));
+			// Extract user message from A2A context (A2A-specific layer)
+		String userMessage = A2AContext.getUserMessage(executionContext);
 
-			// Execute using ChatClientExecutor
-			String response = executor.execute(chatClient, executionContext);
+		logger.debug("Executing task for user message: {}", userMessage);
+
+		// Execute using protocol-agnostic ChatClientExecutor
+		String response = executor.execute(chatClient, userMessage, executionContext);
 
 			logger.debug("AI Response: {}", response);
 

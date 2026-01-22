@@ -32,9 +32,9 @@ import io.a2a.spec.AgentCard;
 import io.a2a.spec.Task;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springaicommunity.a2a.server.executor.ChatClientExecutor;
-import org.springaicommunity.a2a.server.executor.DefaultChatClientAgentExecutor;
+import org.springaicommunity.a2a.server.executor.DefaultA2AChatClientAgentExecutor;
 import org.springaicommunity.a2a.server.util.A2AContext;
+import org.springaicommunity.chatclient.executor.ChatClientExecutor;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -60,6 +60,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Provides A2A controllers, agent card metadata, and task API support.
  *
  * @author Ilayaperumal Gopinathan
+ * @author Christian Tzolov
  * @since 0.1.0
  */
 @AutoConfiguration
@@ -92,24 +93,24 @@ public class A2AServerAutoConfiguration {
 	}
 
 	/**
-	 * Provide default A2AConfigProvider (SpringConfigProvider).
+	 * Provide default A2AConfigProvider (DefaultA2AConfigProvider).
 	 */
 	@Bean
 	@ConditionalOnMissingBean
 	public A2AConfigProvider configProvider() {
-		logger.info("Auto-configuring SpringConfigProvider for configuration");
-		return new SpringConfigProvider();
+		logger.info("Auto-configuring DefaultA2AConfigProvider for configuration");
+		return new DefaultA2AConfigProvider();
 	}
 
 	/**
-	 * Provide default ChatClientExecutor.
+	 * Provide default ChatClientExecutor (protocol-agnostic).
 	 */
 	@Bean
 	@ConditionalOnMissingBean
 	public ChatClientExecutor chatClientExecutor() {
 		logger.info("Auto-configuring default ChatClientExecutor");
-		return (chatClient, context) -> chatClient.prompt()
-			.user(A2AContext.getUserMessage(context))
+		return (chatClient, userMessage, context) -> chatClient.prompt()
+			.user(userMessage)
 			.toolContext(context)
 			.call()
 			.content();
@@ -189,13 +190,9 @@ public class A2AServerAutoConfiguration {
 	@ConditionalOnMissingBean
 	public AgentExecutor agentExecutor(
 			ChatClient chatClient,
-			@Autowired(required = false) ChatClientExecutor executor) {
-		if (executor != null) {
-			logger.info("Auto-configuring DefaultChatClientAgentExecutor with custom ChatClientExecutor");
-			return new DefaultChatClientAgentExecutor(chatClient, executor);
-		}
-		logger.info("Auto-configuring DefaultChatClientAgentExecutor with default execution logic");
-		return new DefaultChatClientAgentExecutor(chatClient);
+			ChatClientExecutor executor) {
+		logger.info("Auto-configuring DefaultA2AChatClientAgentExecutor");
+		return new DefaultA2AChatClientAgentExecutor(chatClient, executor);
 	}
 
 	/**

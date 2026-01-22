@@ -63,6 +63,12 @@
 			<optional>true</optional>
 		</dependency>
 
+		<!-- Spring AI ChatClient Utils -->
+		<dependency>
+			<groupId>org.springaicommunity</groupId>
+			<artifactId>spring-ai-chatclient-utils</artifactId>
+		</dependency>
+
 		<!-- Spring Boot Autoconfigure (for auto-configuration support) -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

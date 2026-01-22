@@ -288,10 +288,12 @@ See [airbnb-planner-multiagent/README.md](spring-ai-a2a-examples/airbnb-planner-
 
 ```
 spring-ai-a2a/
-├── spring-ai-a2a-server/              # Server implementation
-│   ├── executor/                      # AgentExecutor interfaces and defaults
-│   └── autoconfigure/                 # Spring Boot auto-configuration
-├── spring-ai-a2a-utils/               # Optional utilities
+├── spring-ai-chatclient-utils/        # Protocol-agnostic ChatClientExecutor interface
+├── spring-ai-a2a-server/              # A2A protocol server implementation
+│   ├── executor/                      # DefaultA2AChatClientAgentExecutor
+│   └── controller/                    # A2A protocol controllers
+├── spring-ai-a2a-server-autoconfigure/ # Spring Boot auto-configuration
+├── spring-ai-a2a-utils/               # Optional A2A utilities
 ├── spring-ai-a2a-examples/            # Example applications
 │   └── airbnb-planner-multiagent/     # Multi-agent example
 │       ├── weather-agent/
@@ -397,7 +399,8 @@ public ChatClient myChatClient(
 
 **How it works**:
 - Auto-configuration detects ChatClient bean
-- Creates DefaultChatClientAgentExecutor automatically
+- Uses ChatClientExecutor bean (or provides default implementation)
+- Creates DefaultA2AChatClientAgentExecutor bridging A2A protocol to ChatClient
 - Exposes A2A endpoints at `/a2a`
 
 ### Pattern 2: Custom AgentExecutor

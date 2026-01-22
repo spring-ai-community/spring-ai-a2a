@@ -32,26 +32,18 @@ import java.util.Optional;
 import java.util.Properties;
 
 /**
- * Spring-based implementation of A2A {@link A2AConfigProvider}.
+ * Default A2A configuration provider implementation.
  *
- * <p>Uses Spring's {@link ResourcePatternResolver} to locate configuration files,
- * supporting Spring Boot fat JARs, Docker containers, and development environments.
- *
- * <p>Configuration is loaded from {@code META-INF/a2a-defaults.properties} files
- * on the classpath at application startup via {@link InitializingBean#afterPropertiesSet()}.
- * If no configuration files are found, hardcoded defaults are used for graceful degradation.
- *
- * <p><b>Fail-Fast Behavior:</b> Initialization failures (e.g., duplicate configuration keys)
- * prevent bean creation and cause application startup to fail, ensuring configuration
- * errors are detected immediately.
+ * <p>Loads configuration from {@code META-INF/a2a-defaults.properties} on the classpath.
+ * If no configuration files are found, uses hardcoded defaults.
  *
  * @author Ilayaperumal Gopinathan
  * @author Christian Tzolov
  * @since 0.1.0
  */
-public class SpringConfigProvider implements A2AConfigProvider, InitializingBean {
+public class DefaultA2AConfigProvider implements A2AConfigProvider, InitializingBean {
 
-	private static final Logger logger = LoggerFactory.getLogger(SpringConfigProvider.class);
+	private static final Logger logger = LoggerFactory.getLogger(DefaultA2AConfigProvider.class);
 
 	private static final String DEFAULTS_RESOURCE = "classpath*:META-INF/a2a-defaults.properties";
 
@@ -64,23 +56,23 @@ public class SpringConfigProvider implements A2AConfigProvider, InitializingBean
 	private Map<String, String> configCache;
 
 	/**
-	 * Create SpringConfigProvider with default resource resolver.
+	 * Create DefaultA2AConfigProvider with default resource resolver.
 	 */
-	public SpringConfigProvider() {
+	public DefaultA2AConfigProvider() {
 		this(new PathMatchingResourcePatternResolver());
 	}
 
 	/**
-	 * Create SpringConfigProvider with custom resolver for testing.
+	 * Create DefaultA2AConfigProvider with custom resolver for testing.
 	 */
-	public SpringConfigProvider(ResourcePatternResolver resourceResolver) {
+	public DefaultA2AConfigProvider(ResourcePatternResolver resourceResolver) {
 		this.resourceResolver = resourceResolver;
 	}
 
 	@Override
 	public void afterPropertiesSet() {
 		this.configCache = Map.copyOf(loadConfiguration());
-		logger.debug("SpringConfigProvider initialization complete: {} configuration values loaded",
+		logger.debug("DefaultA2AConfigProvider initialization complete: {} configuration values loaded",
 				configCache.size());
 	}
 
