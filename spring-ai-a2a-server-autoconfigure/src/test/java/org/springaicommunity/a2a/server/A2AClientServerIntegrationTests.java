@@ -68,6 +68,33 @@ class A2AClientServerIntegrationTests {
 				.defaultSystem("You are a test agent")
 				.build();
 		}
+
+		/**
+		 * Provides AgentCard bean for testing.
+		 */
+		@Bean
+		public AgentCard testAgentCard() {
+			return new AgentCard(
+				"Spring AI A2A Agent",
+				"A2A agent powered by Spring AI",
+				"http://localhost:58888/a2a",
+				null,
+				"1.0.0",
+				null,
+				new io.a2a.spec.AgentCapabilities(false, false, false, java.util.List.of()),
+				java.util.List.of("text"),
+				java.util.List.of("text"),
+				java.util.List.of(),
+				false,
+				null,
+				null,
+				null,
+				java.util.List.of(new io.a2a.spec.AgentInterface("JSONRPC", "http://localhost:58888/a2a")),
+				"JSONRPC",
+				"0.1.0",
+				null
+			);
+		}
 	}
 
 	@LocalServerPort

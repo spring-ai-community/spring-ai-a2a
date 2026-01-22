@@ -4,15 +4,15 @@ Spring Boot integration for building AI agent servers using the [A2A Protocol](h
 
 ## Overview
 
-Spring AI A2A provides **server-side** support for exposing Spring AI agents via the A2A protocol. Simply add the dependency, implement an AgentExecutor, and your agent is automatically exposed at `/a2a` endpoint.
+Spring AI A2A provides **server-side** support for exposing Spring AI agents via the A2A protocol. Simply add the dependency, provide `ChatClient` and `AgentCard` beans, and your agent is automatically exposed at `/a2a` endpoint with zero configuration.
 
 ### Key Features
 
 - **A2A Protocol Server**: Expose agents via A2A protocol HTTP/JSON-RPC endpoints
-- **Spring Boot Auto-Configuration**: Zero-configuration server setup
+- **Zero-Configuration**: Just provide ChatClient and AgentCard beans - AgentExecutor auto-configured
 - **Spring AI Integration**: Built on Spring AI's ChatClient
 - **A2A SDK Based**: Uses the official A2A Java SDK (0.3.3.Final)
-- **DefaultChatClientAgentExecutor**: Framework-provided executor for simple agents
+- **Automatic Agent Setup**: Framework creates AgentExecutor from ChatClient automatically
 - **Tool Support**: Full support for Spring AI's `@Tool` annotations
 
 ## Quick Start
@@ -48,30 +48,40 @@ public class WeatherAgentApplication {
 
     @Bean
     public AgentCard agentCard() {
-        return new AgentCard.Builder()
-            .name("Weather Agent")
-            .description("Provides weather forecasts and climate data")
-            .url("http://localhost:8080/a2a")
-            .version("1.0.0")
-            .protocolVersion("0.3.0")
-            .capabilities(new AgentCapabilities.Builder().streaming(false).build())
-            .defaultInputModes(List.of("text"))
-            .defaultOutputModes(List.of("text"))
-            .build();
+        return new AgentCard(
+            "Weather Agent",
+            "Provides weather forecasts and climate data",
+            "http://localhost:8080/a2a",
+            null,
+            "1.0.0",
+            null,
+            new AgentCapabilities(false, false, false, List.of()),
+            List.of("text"),
+            List.of("text"),
+            List.of(),
+            false,
+            null,
+            null,
+            null,
+            List.of(new AgentInterface("JSONRPC", "http://localhost:8080/a2a")),
+            "JSONRPC",
+            "0.3.0",
+            null
+        );
     }
 
     @Bean
-    public AgentExecutor agentExecutor(
+    public ChatClient weatherChatClient(
             ChatClient.Builder chatClientBuilder,
             WeatherTools weatherTools) {
 
-        ChatClient chatClient = chatClientBuilder.clone()
+        return chatClientBuilder.clone()
             .defaultSystem(SYSTEM_INSTRUCTION)
             .defaultTools(weatherTools)
             .build();
-
-        return new DefaultChatClientAgentExecutor(chatClient);
     }
+
+    // Note: AgentExecutor is auto-configured from ChatClient bean
 }
 ```
 
@@ -194,8 +204,15 @@ Spring AI A2A makes it simple to expose your agents via A2A protocol:
 │     Your Spring Boot Application   │
 │                                     │
 │  ┌──────────────────────────────┐  │
+│  │   ChatClient (your bean)     │  │
+│  │   AgentCard (your bean)      │  │
+│  └──────────────┬───────────────┘  │
+│                 │                   │
+│                 ▼                   │
+│  ┌──────────────────────────────┐  │
 │  │   AgentExecutor              │  │
-│  │   (your implementation)      │  │
+│  │   (auto-configured from      │  │
+│  │    ChatClient)                │  │
 │  └──────────────┬───────────────┘  │
 │                 │                   │
 │  ┌──────────────▼───────────────┐  │
@@ -209,9 +226,10 @@ Spring AI A2A makes it simple to expose your agents via A2A protocol:
 ```
 
 **Key Points**:
-- You provide `AgentExecutor` bean
+- You provide `ChatClient` and `AgentCard` beans
+- Framework auto-creates `AgentExecutor` from ChatClient
 - Framework auto-configures `DefaultA2AServer`
-- A2A endpoints exposed automatically
+- A2A endpoints exposed automatically at `/a2a`
 
 ### Client-Side: Calling Remote Agents
 
@@ -252,7 +270,7 @@ The `spring-ai-a2a-examples/` directory contains complete working examples:
 - **weather-agent** - Weather forecasting with mock tools
 - **accommodation-agent** - Hotel recommendations with mock search
 
-Both use `DefaultChatClientAgentExecutor` for simplicity.
+Both use zero-config pattern: just provide ChatClient and AgentCard beans, AgentExecutor is auto-configured.
 
 ### Multi-Agent System
 
@@ -329,29 +347,58 @@ spring:
 
 ## Implementation Patterns
 
-### Pattern 1: Simple Agent with DefaultChatClientAgentExecutor
+### Pattern 1: Zero-Config Agent with Auto-Configuration
 
-Best for agents that use ChatClient with tools:
+Best for most agents - just provide ChatClient and AgentCard beans:
 
 ```java
 @Bean
-public AgentExecutor agentExecutor(
+public AgentCard agentCard() {
+    return new AgentCard(
+        "My Agent",
+        "Description of what my agent does",
+        "http://localhost:8080/a2a",
+        null,
+        "1.0.0",
+        null,
+        new AgentCapabilities(false, false, false, List.of()),
+        List.of("text"),
+        List.of("text"),
+        List.of(),
+        false,
+        null,
+        null,
+        null,
+        List.of(new AgentInterface("JSONRPC", "http://localhost:8080/a2a")),
+        "JSONRPC",
+        "0.3.0",
+        null
+    );
+}
+
+@Bean
+public ChatClient myChatClient(
         ChatClient.Builder chatClientBuilder,
         MyTools tools) {
 
-    ChatClient chatClient = chatClientBuilder.clone()
+    return chatClientBuilder.clone()
         .defaultSystem("You are a helpful assistant...")
         .defaultTools(tools)
         .build();
-
-    return new DefaultChatClientAgentExecutor(chatClient);
 }
+
+// AgentExecutor is automatically created from ChatClient by auto-configuration
 ```
 
 **Use when**:
 - Simple agents with tools
 - Standard ChatClient patterns
 - No custom execution logic needed
+
+**How it works**:
+- Auto-configuration detects ChatClient bean
+- Creates DefaultChatClientAgentExecutor automatically
+- Exposes A2A endpoints at `/a2a`
 
 ### Pattern 2: Custom AgentExecutor
 
@@ -520,17 +567,17 @@ public class RemoteAgentTools {
 }
 
 @Bean
-public AgentExecutor orchestrator(
+public ChatClient orchestratorChatClient(
         ChatClient.Builder chatClientBuilder,
         RemoteAgentTools tools) {
 
-    ChatClient chatClient = chatClientBuilder.clone()
+    return chatClientBuilder.clone()
         .defaultSystem("You are an orchestrator that delegates to specialized agents...")
         .defaultTools(tools)
         .build();
-
-    return new DefaultChatClientAgentExecutor(chatClient);
 }
+
+// AgentExecutor is auto-configured from ChatClient bean
 ```
 
 **Use when**:

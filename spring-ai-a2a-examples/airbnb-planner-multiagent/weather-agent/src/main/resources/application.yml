@@ -14,9 +14,15 @@ spring:
         base-path: /a2a
       agent:
         name: "Weather Agent"
-        description: "Provides weather forecasts, climate information, and travel weather planning advice for any location and date"
+        description: "Helps with weather forecasts and climate data"
         version: "1.0.0"
-        protocol-version: "0.1.0"
+        protocol-version: "0.3.0"
+        url: "http://localhost:10001/a2a"
+        system-prompt: |
+          You are a specialized weather forecast assistant.
+          Your primary function is to utilize the provided tools to retrieve and relay weather information in response to user queries.
+          You must rely exclusively on these tools for data and refrain from inventing information.
+          Ensure that all responses include the detailed output from the tools used and are formatted in Markdown.
         capabilities:
           streaming: false
           push-notifications: false
@@ -25,9 +31,15 @@ spring:
           - text
         default-output-modes:
           - text
-        supported-interfaces:
-          - type: JSONRPC
-            url: http://localhost:10001/a2a
+        skills:
+          - id: weather_search
+            name: Search weather
+            description: Helps with weather in cities, states, and countries
+            tags:
+              - weather
+            examples:
+              - "weather in LA, CA"
+              - "weather in Paris in July"
 
     # OpenAI Configuration
     openai:

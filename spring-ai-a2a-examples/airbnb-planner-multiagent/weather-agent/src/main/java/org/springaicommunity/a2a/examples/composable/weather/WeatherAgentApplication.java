@@ -16,21 +16,21 @@
 
 package org.springaicommunity.a2a.examples.composable.weather;
 
-import java.util.List;
-
-import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.spec.AgentCapabilities;
 import io.a2a.spec.AgentCard;
-import io.a2a.spec.AgentSkill;
-
+import io.a2a.spec.AgentInterface;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
-import org.springaicommunity.a2a.server.executor.DefaultChatClientAgentExecutor;
+
+import java.util.List;
 
 /**
  * Weather Agent - A specialized A2A agent for weather forecasting.
+ *
+ * <p>Demonstrates minimal-configuration A2A agent setup. Provides AgentCard
+ * and ChatClient beans, auto-configuration handles the rest.
  *
  * @author Ilayaperumal Gopinathan
  * @since 0.1.0
@@ -38,45 +38,45 @@ import org.springaicommunity.a2a.server.executor.DefaultChatClientAgentExecutor;
 @SpringBootApplication
 public class WeatherAgentApplication {
 
-	private static final String WEATHER_SYSTEM_INSTRUCTION = """
-			You are a specialized weather forecast assistant.
-			Your primary function is to utilize the provided tools to retrieve and relay weather information in response to user queries.
-			You must rely exclusively on these tools for data and refrain from inventing information.
-			Ensure that all responses include the detailed output from the tools used and are formatted in Markdown.
-			""";
-
 	public static void main(String[] args) {
 		SpringApplication.run(WeatherAgentApplication.class, args);
 	}
 
+	/**
+	 * Define AgentCard metadata for this agent.
+	 */
 	@Bean
 	public AgentCard agentCard() {
-		return new AgentCard.Builder().name("Weather Agent")
-			.description("Helps with weather forecasts and climate data")
-			.url("http://localhost:10001/a2a")
-			.version("1.0.0")
-			.capabilities(new AgentCapabilities.Builder().streaming(false).build())
-			.defaultInputModes(List.of("text"))
-			.defaultOutputModes(List.of("text"))
-			.skills(List.of(new AgentSkill.Builder().id("weather_search")
-				.name("Search weather")
-				.description("Helps with weather in cities, states, and countries")
-				.tags(List.of("weather"))
-				.examples(List.of("weather in LA, CA", "weather in Paris in July"))
-				.build()))
-			.protocolVersion("0.3.0")
-			.build();
+		return new AgentCard(
+			"Weather Agent",
+			"Helps with weather forecasts and climate data",
+			"http://localhost:10001/a2a",
+			null,
+			"1.0.0",
+			null,
+			new AgentCapabilities(false, false, false, List.of()),
+			List.of("text"),
+			List.of("text"),
+			List.of(),
+			false,
+			null,
+			null,
+			null,
+			List.of(new AgentInterface("JSONRPC", "http://localhost:10001/a2a")),
+			"JSONRPC",
+			"0.3.0",
+			null
+		);
 	}
 
+	/**
+	 * Create ChatClient with weather tools.
+	 */
 	@Bean
-	public AgentExecutor agentExecutor(ChatClient.Builder chatClientBuilder, WeatherTools weatherTools) {
-
-		ChatClient chatClient = chatClientBuilder.clone()
-			.defaultSystem(WEATHER_SYSTEM_INSTRUCTION)
+	public ChatClient weatherChatClient(ChatClient.Builder chatClientBuilder, WeatherTools weatherTools) {
+		return chatClientBuilder.clone()
 			.defaultTools(weatherTools)
 			.build();
-
-		return new DefaultChatClientAgentExecutor(chatClient);
 	}
 
 }

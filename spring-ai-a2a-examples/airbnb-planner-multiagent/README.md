@@ -103,35 +103,40 @@ public class WeatherAgentApplication {
 
     @Bean
     public AgentCard agentCard() {
-        return new AgentCard.Builder()
-            .name("Weather Agent")
-            .description("Helps with weather forecasts and climate data")
-            .url("http://localhost:10001/a2a")
-            .version("1.0.0")
-            .protocolVersion("0.3.0")
-            .capabilities(new AgentCapabilities.Builder().streaming(false).build())
-            .defaultInputModes(List.of("text"))
-            .defaultOutputModes(List.of("text"))
-            .skills(List.of(new AgentSkill.Builder()
-                .id("weather_search")
-                .name("Search weather")
-                .description("Helps with weather in cities, states, and countries")
-                .build()))
-            .build();
+        return new AgentCard(
+            "Weather Agent",
+            "Helps with weather forecasts and climate data",
+            "http://localhost:10001/a2a",
+            null,
+            "1.0.0",
+            null,
+            new AgentCapabilities(false, false, false, List.of()),
+            List.of("text"),
+            List.of("text"),
+            List.of(),
+            false,
+            null,
+            null,
+            null,
+            List.of(new AgentInterface("JSONRPC", "http://localhost:10001/a2a")),
+            "JSONRPC",
+            "0.3.0",
+            null
+        );
     }
 
     @Bean
-    public AgentExecutor agentExecutor(
+    public ChatClient weatherChatClient(
             ChatClient.Builder chatClientBuilder,
             WeatherTools weatherTools) {
 
-        ChatClient chatClient = chatClientBuilder.clone()
+        return chatClientBuilder.clone()
             .defaultSystem(WEATHER_SYSTEM_INSTRUCTION)
             .defaultTools(weatherTools)
             .build();
-
-        return new DefaultChatClientAgentExecutor(chatClient);
     }
+
+    // Note: AgentExecutor is auto-configured from ChatClient bean
 }
 ```
 
@@ -159,7 +164,7 @@ public class WeatherTools {
 ```
 
 **Benefits**:
-- ✅ Uses framework's `DefaultChatClientAgentExecutor` (no boilerplate)
+- ✅ Zero-config agent setup (AgentExecutor auto-configured)
 - ✅ Domain-specific tools via `@Tool` annotation
 - ✅ Independent deployment and scaling
 - ✅ Specialized system prompts per agent

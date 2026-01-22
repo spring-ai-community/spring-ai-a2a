@@ -18,7 +18,6 @@ package org.springaicommunity.a2a.server.autoconfigure;
 
 import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.server.config.A2AConfigProvider;
-import io.a2a.server.config.DefaultValuesConfigProvider;
 import io.a2a.server.events.InMemoryQueueManager;
 import io.a2a.server.events.QueueManager;
 import io.a2a.server.requesthandlers.DefaultRequestHandler;
@@ -29,14 +28,15 @@ import io.a2a.server.tasks.PushNotificationConfigStore;
 import io.a2a.server.tasks.PushNotificationSender;
 import io.a2a.server.tasks.TaskStateProvider;
 import io.a2a.server.tasks.TaskStore;
-import io.a2a.spec.AgentCapabilities;
 import io.a2a.spec.AgentCard;
-import io.a2a.spec.AgentInterface;
 import io.a2a.spec.Task;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springaicommunity.a2a.server.executor.ChatClientExecutor;
 import org.springaicommunity.a2a.server.executor.DefaultChatClientAgentExecutor;
+import org.springaicommunity.a2a.server.util.A2AContext;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -56,31 +56,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Spring Boot auto-configuration for A2A Server.
  *
- * <p>This auto-configuration automatically enables A2A protocol support when:
- * <ul>
- *   <li>Spring AI ChatClient is on the classpath</li>
- *   <li>A ChatClient bean is present in the application context</li>
- * </ul>
- *
- * <p><strong>What it provides:</strong>
- * <ul>
- *   <li>A2A protocol controllers ({@code /a2a} endpoint)</li>
- *   <li>Agent card metadata endpoint</li>
- *   <li>Task API support for long-running operations</li>
- * </ul>
- *
- * <p><strong>Usage:</strong>
- * Simply add {@code spring-ai-a2a-server} as a dependency and create a ChatClient bean:
- * <pre>
- * &#64;Bean
- * public ChatClient myAgent(ChatModel chatModel) {
- *     return ChatClient.builder(chatModel)
- *         .defaultSystem("You are a helpful assistant...")
- *         .build();
- * }
- * </pre>
- *
- * The A2A server will automatically expose your agent at {@code http://localhost:PORT/a2a}
+ * <p>Automatically enables A2A protocol support when Spring AI ChatClient is on the classpath.
+ * Provides A2A controllers, agent card metadata, and task API support.
  *
  * @author Ilayaperumal Gopinathan
  * @since 0.1.0
@@ -97,53 +74,15 @@ public class A2AServerAutoConfiguration {
 	private static final Logger logger = LoggerFactory.getLogger(A2AServerAutoConfiguration.class);
 
 	/**
-	 * Provide default AgentCard if none is configured by the user.
-	 *
-	 * <p>Users can override this by providing their own AgentCard bean with
-	 * custom metadata, capabilities, and supported interfaces.
-	 *
-	 * @return default agent card
+	 * Log AgentCard at startup. Applications MUST provide AgentCard bean.
 	 */
-	@Bean
-	@ConditionalOnMissingBean
-	public AgentCard agentCard() {
-		return new AgentCard(
-			"Spring AI A2A Agent", // name
-			"A2A agent powered by Spring AI", // description
-			"http://localhost:8080/a2a", // url
-			null, // provider
-			"1.0.0", // version
-			null, // documentationUrl
-			new AgentCapabilities(false, false, false, List.of()), // capabilities
-			List.of("text"), // defaultInputModes
-			List.of("text"), // defaultOutputModes
-			List.of(), // skills
-			false, // supportsAuthenticatedExtendedCard
-			null, // securitySchemes
-			null, // security
-			null, // iconUrl
-			List.of(new AgentInterface("JSONRPC", "http://localhost:8080/a2a")), // additionalInterfaces
-			"JSONRPC", // preferredTransport
-			"0.1.0", // protocolVersion
-			null // signatures
-		);
+	@Autowired
+	public void logAgentCard(AgentCard agentCard) {
+		logger.info("Using AgentCard: {} (version: {})", agentCard.name(), agentCard.version());
 	}
 
 	/**
-	 * Provide default TaskStore for task management.
-	 *
-	 * <p>Uses the A2A SDK's InMemoryTaskStore implementation by default.
-	 * Override by providing your own TaskStore bean in a @Configuration class.
-	 *
-	 * <p><strong>Example override:</strong>
-	 * <pre>
-	 * &#64;Bean
-	 * public TaskStore taskStore() {
-	 *     return new RedisTaskStore(redisTemplate);
-	 * }
-	 * </pre>
-	 *
-	 * @return in-memory task store
+	 * Provide default TaskStore (InMemoryTaskStore).
 	 */
 	@Bean
 	@ConditionalOnMissingBean
@@ -153,51 +92,41 @@ public class A2AServerAutoConfiguration {
 	}
 
 	/**
-	 * Provide default A2AConfigProvider for configuration management.
-	 *
-	 * <p>Uses the A2A SDK's DefaultValuesConfigProvider implementation by default.
-	 * Override by providing your own A2AConfigProvider bean in a @Configuration class.
-	 *
-	 * <p><strong>Example override:</strong>
-	 * <pre>
-	 * &#64;Bean
-	 * public A2AConfigProvider configProvider(Environment environment) {
-	 *     return new SpringEnvironmentConfigProvider(environment);
-	 * }
-	 * </pre>
-	 *
-	 * @return default config provider
+	 * Provide default A2AConfigProvider (SpringConfigProvider).
 	 */
 	@Bean
 	@ConditionalOnMissingBean
 	public A2AConfigProvider configProvider() {
-		logger.info("Auto-configuring DefaultValuesConfigProvider for configuration");
-		return new DefaultValuesConfigProvider();
+		logger.info("Auto-configuring SpringConfigProvider for configuration");
+		return new SpringConfigProvider();
 	}
 
 	/**
-	 * Provide default QueueManager for managing event queues per task.
-	 *
-	 * <p>Uses the A2A SDK's InMemoryQueueManager implementation by default.
-	 * Override by providing your own QueueManager bean for distributed scenarios.
-	 *
-	 * @param taskStore the task store (which also implements TaskStateProvider)
-	 * @return queue manager
+	 * Provide default ChatClientExecutor.
+	 */
+	@Bean
+	@ConditionalOnMissingBean
+	public ChatClientExecutor chatClientExecutor() {
+		logger.info("Auto-configuring default ChatClientExecutor");
+		return (chatClient, context) -> chatClient.prompt()
+			.user(A2AContext.getUserMessage(context))
+			.toolContext(context)
+			.call()
+			.content();
+	}
+
+	/**
+	 * Provide default QueueManager (InMemoryQueueManager).
 	 */
 	@Bean
 	@ConditionalOnMissingBean
 	public QueueManager queueManager(TaskStore taskStore) {
 		logger.info("Auto-configuring InMemoryQueueManager for event queue management");
-		// InMemoryTaskStore implements TaskStateProvider
 		return new InMemoryQueueManager((TaskStateProvider) taskStore);
 	}
 
 	/**
-	 * Provide default PushNotificationConfigStore for push notification configuration.
-	 *
-	 * <p>Uses the A2A SDK's InMemoryPushNotificationConfigStore implementation by default.
-	 *
-	 * @return push notification config store
+	 * Provide default PushNotificationConfigStore (InMemoryPushNotificationConfigStore).
 	 */
 	@Bean
 	@ConditionalOnMissingBean
@@ -207,11 +136,7 @@ public class A2AServerAutoConfiguration {
 	}
 
 	/**
-	 * Provide default PushNotificationSender.
-	 *
-	 * <p>No-op implementation by default. Override to enable actual push notifications.
-	 *
-	 * @return push notification sender
+	 * Provide default PushNotificationSender (no-op).
 	 */
 	@Bean
 	@ConditionalOnMissingBean
@@ -220,7 +145,6 @@ public class A2AServerAutoConfiguration {
 		return new PushNotificationSender() {
 			@Override
 			public void sendNotification(Task task) {
-				// No-op implementation - push notifications not enabled by default
 				logger.debug("Push notification requested for task {} but sender is disabled", task.getId());
 			}
 		};
@@ -228,11 +152,6 @@ public class A2AServerAutoConfiguration {
 
 	/**
 	 * Provide internal executor for async agent operations.
-	 *
-	 * <p>Configured with thread pool settings from A2AConfigProvider.
-	 *
-	 * @param configProvider the config provider for thread pool settings
-	 * @return executor for async operations
 	 */
 	@Bean
 	@Qualifier("a2aInternal")
@@ -264,63 +183,23 @@ public class A2AServerAutoConfiguration {
 	}
 
 	/**
-	 * Provide default AgentExecutor that bridges ChatClient to A2A protocol.
-	 *
-	 * <p>Uses {@link DefaultChatClientAgentExecutor} which wraps ChatClient invocations
-	 * with proper A2A task lifecycle management using TaskUpdater.
-	 *
-	 * <p>Override by providing your own AgentExecutor bean for custom logic:
-	 * <pre>
-	 * &#64;Bean
-	 * public AgentExecutor customExecutor(ChatClient.Builder builder, MyTools tools) {
-	 *     ChatClient chatClient = builder.clone()
-	 *         .defaultSystem("Custom prompt...")
-	 *         .defaultTools(tools)
-	 *         .build();
-	 *
-	 *     return new AgentExecutor() {
-	 *         public void execute(RequestContext context, EventQueue eventQueue) {
-	 *             TaskUpdater updater = new TaskUpdater(context, eventQueue);
-	 *             updater.startWork();
-	 *             // Custom logic here
-	 *             updater.complete();
-	 *         }
-	 *
-	 *         public void cancel(RequestContext context, EventQueue eventQueue) {
-	 *             new TaskUpdater(context, eventQueue).cancel();
-	 *         }
-	 *     };
-	 * }
-	 * </pre>
-	 *
-	 * @param chatClient the ChatClient to wrap
-	 * @return agent executor
+	 * Provide default AgentExecutor bridging ChatClient to A2A protocol.
 	 */
 	@Bean
 	@ConditionalOnMissingBean
-	public AgentExecutor agentExecutor(ChatClient chatClient) {
-		logger.info("Auto-configuring DefaultChatClientAgentExecutor wrapping ChatClient");
+	public AgentExecutor agentExecutor(
+			ChatClient chatClient,
+			@Autowired(required = false) ChatClientExecutor executor) {
+		if (executor != null) {
+			logger.info("Auto-configuring DefaultChatClientAgentExecutor with custom ChatClientExecutor");
+			return new DefaultChatClientAgentExecutor(chatClient, executor);
+		}
+		logger.info("Auto-configuring DefaultChatClientAgentExecutor with default execution logic");
 		return new DefaultChatClientAgentExecutor(chatClient);
 	}
 
 	/**
-	 * Provide RequestHandler that wires all A2A SDK components together.
-	 *
-	 * <p>This is the core of the A2A server implementation. It handles:
-	 * <ul>
-	 *   <li>Protocol-level request/response handling</li>
-	 *   <li>Task lifecycle management</li>
-	 *   <li>Event queue coordination</li>
-	 *   <li>Push notification delivery</li>
-	 * </ul>
-	 *
-	 * @param agentExecutor the agent executor for processing messages
-	 * @param taskStore the task store for persistence
-	 * @param queueManager the queue manager for event queues
-	 * @param pushConfigStore the push notification config store
-	 * @param pushSender the push notification sender
-	 * @param executor the internal executor for async operations
-	 * @return request handler
+	 * Provide RequestHandler wiring all A2A SDK components together.
 	 */
 	@Bean
 	@ConditionalOnMissingBean
