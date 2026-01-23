@@ -38,7 +38,10 @@ import io.a2a.spec.AgentCard;
 import io.a2a.spec.Task;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springaicommunity.a2a.server.executor.AbstractA2AChatClientAgentExecutor;
+import org.springaicommunity.a2a.server.controller.AgentCardController;
+import org.springaicommunity.a2a.server.controller.MessageController;
+import org.springaicommunity.a2a.server.controller.TaskController;
+import org.springaicommunity.a2a.server.executor.DefaultA2AChatClientAgentExecutor;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,8 +57,9 @@ import org.springframework.context.annotation.ComponentScan;
 /**
  * Spring Boot auto-configuration for A2A Server.
  *
- * <p>Automatically enables A2A protocol support when Spring AI ChatClient is on the classpath.
- * Provides A2A controllers, agent card metadata, and task API support.
+ * <p>
+ * Automatically enables A2A protocol support when Spring AI ChatClient is on the
+ * classpath. Provides A2A controllers, agent card metadata, and task API support.
  *
  * @author Ilayaperumal Gopinathan
  * @author Christian Tzolov
@@ -63,11 +67,9 @@ import org.springframework.context.annotation.ComponentScan;
  */
 @AutoConfiguration
 @ConditionalOnClass(ChatClient.class)
-@ConditionalOnProperty(prefix = "spring.ai.a2a.server", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = A2AServerProperties.CONFIG_PREFIX, name = "enabled", havingValue = "true",
+		matchIfMissing = true)
 @EnableConfigurationProperties(A2AServerProperties.class)
-@ComponentScan(basePackages = {
-	"org.springaicommunity.a2a.server.controller"
-})
 public class A2AServerAutoConfiguration {
 
 	private static final Logger logger = LoggerFactory.getLogger(A2AServerAutoConfiguration.class);
@@ -78,6 +80,21 @@ public class A2AServerAutoConfiguration {
 	@Autowired
 	public void logAgentCard(AgentCard agentCard) {
 		logger.info("Using AgentCard: {} (version: {})", agentCard.name(), agentCard.version());
+	}
+
+	@Bean
+	AgentCardController agentCardController(AgentCard agentCard) {
+		return new AgentCardController(agentCard);
+	}
+
+	@Bean
+	MessageController messageController(RequestHandler requestHandler) {
+		return new MessageController(requestHandler);
+	}
+
+	@Bean
+	TaskController taskController(RequestHandler requestHandler) {
+		return new TaskController(requestHandler);
 	}
 
 	/**
@@ -150,19 +167,13 @@ public class A2AServerAutoConfiguration {
 				corePoolSize, maxPoolSize, keepAliveSeconds);
 
 		AtomicInteger threadCounter = new AtomicInteger(1);
-		ThreadPoolExecutor executor = new ThreadPoolExecutor(
-			corePoolSize,
-			maxPoolSize,
-			keepAliveSeconds,
-			TimeUnit.SECONDS,
-			new LinkedBlockingQueue<>(),
-			runnable -> {
-				Thread thread = new Thread(runnable);
-				thread.setName("a2a-agent-executor-" + threadCounter.getAndIncrement());
-				thread.setDaemon(false); // Non-daemon threads as per A2A spec
-				return thread;
-			}
-		);
+		ThreadPoolExecutor executor = new ThreadPoolExecutor(corePoolSize, maxPoolSize, keepAliveSeconds,
+				TimeUnit.SECONDS, new LinkedBlockingQueue<>(), runnable -> {
+					Thread thread = new Thread(runnable);
+					thread.setName("a2a-agent-executor-" + threadCounter.getAndIncrement());
+					thread.setDaemon(false); // Non-daemon threads as per A2A spec
+					return thread;
+				});
 
 		return executor;
 	}
@@ -170,30 +181,21 @@ public class A2AServerAutoConfiguration {
 	/**
 	 * Provide RequestHandler wiring all A2A SDK components together.
 	 *
-	 * <p>Note: Applications must provide their own {@link AgentExecutor} bean
-	 * by extending {@link AbstractA2AChatClientAgentExecutor} and implementing
-	 * the {@code executeAsMessage} method.
+	 * <p>
+	 * Note: Applications must provide their own {@link AgentExecutor} bean by extending
+	 * {@link DefaultA2AChatClientAgentExecutor} and implementing the
+	 * {@code executeAsMessage} method.
 	 */
 	@Bean
 	@ConditionalOnMissingBean
-	public RequestHandler requestHandler(
-			AgentExecutor agentExecutor,
-			TaskStore taskStore,
-			QueueManager queueManager,
-			PushNotificationConfigStore pushConfigStore,
-			PushNotificationSender pushSender,
+	public RequestHandler requestHandler(AgentExecutor agentExecutor, TaskStore taskStore, QueueManager queueManager,
+			PushNotificationConfigStore pushConfigStore, PushNotificationSender pushSender,
 			@Qualifier("a2aInternal") Executor executor) {
 
 		logger.info("Creating DefaultRequestHandler with A2A SDK components");
 
-		return DefaultRequestHandler.create(
-			agentExecutor,
-			taskStore,
-			queueManager,
-			pushConfigStore,
-			pushSender,
-			executor
-		);
+		return DefaultRequestHandler.create(agentExecutor, taskStore, queueManager, pushConfigStore, pushSender,
+				executor);
 	}
 
 }

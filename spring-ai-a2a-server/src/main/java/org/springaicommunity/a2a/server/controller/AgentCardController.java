@@ -19,19 +19,19 @@ package org.springaicommunity.a2a.server.controller;
 import io.a2a.spec.AgentCard;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
  * REST controller for A2A agent card metadata.
  *
  * @author Ilayaperumal Gopinathan
+ * @author Christian Tzolov
  * @since 0.1.0
  */
 @RestController
-@RequestMapping("${spring.ai.a2a.server.base-path:/a2a}")
 public class AgentCardController {
 
 	private static final Logger logger = LoggerFactory.getLogger(AgentCardController.class);
@@ -45,12 +45,20 @@ public class AgentCardController {
 	/**
 	 * Returns agent card metadata.
 	 */
-	@GetMapping(
-		path = "/card",
-		produces = MediaType.APPLICATION_JSON_VALUE
-	)
+	@GetMapping(path = "/.well-known/agent-card.json", produces = MediaType.APPLICATION_JSON_VALUE)
 	public AgentCard getAgentCard() {
 		logger.debug("Serving agent card: {}", agentCard.name());
+		return agentCard;
+	}
+
+	/**
+	 * Alternative endpoint for getting the agent card. Some A2A implementations may use
+	 * this endpoint.
+	 * @return the agent card in JSON format
+	 */
+	@GetMapping(path = "/card", produces = MediaType.APPLICATION_JSON_VALUE)
+	public AgentCard getAgentCardV1() {
+		logger.debug("Serving agent card via /card: {}", agentCard.name());
 		return agentCard;
 	}
 

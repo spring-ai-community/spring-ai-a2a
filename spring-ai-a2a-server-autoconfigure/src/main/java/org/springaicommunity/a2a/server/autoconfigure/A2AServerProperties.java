@@ -32,7 +32,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *     a2a:
  *       server:
  *         enabled: true
- *         base-path: /a2a
  * </pre>
  *
  * <p><strong>Custom TaskStore/ConfigProvider:</strong>
@@ -52,20 +51,18 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * </pre>
  *
  * @author Ilayaperumal Gopinathan
+ * @author Christian Tzolov
  * @since 0.1.0
  */
-@ConfigurationProperties(prefix = "spring.ai.a2a.server")
+@ConfigurationProperties(prefix = A2AServerProperties.CONFIG_PREFIX)
 public class A2AServerProperties {
+
+	public static final String CONFIG_PREFIX = "spring.ai.a2a.server";
 
 	/**
 	 * Whether the A2A server is enabled.
 	 */
 	private boolean enabled = true;
-
-	/**
-	 * Base path for A2A endpoints.
-	 */
-	private String basePath = "/a2a";
 
 	public boolean isEnabled() {
 		return enabled;
@@ -74,13 +71,4 @@ public class A2AServerProperties {
 	public void setEnabled(boolean enabled) {
 		this.enabled = enabled;
 	}
-
-	public String getBasePath() {
-		return basePath;
-	}
-
-	public void setBasePath(String basePath) {
-		this.basePath = basePath;
-	}
-
 }
