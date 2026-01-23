@@ -21,33 +21,16 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * Configuration properties for Spring AI A2A Server.
  *
- * <p>These properties allow customization of basic A2A server behavior.
- * For advanced customization (TaskStore, ConfigProvider), provide custom beans
- * in a @Configuration class.
+ * <p>
+ * These properties allow customization of basic A2A server behavior.
  *
- * <p><strong>Example configuration:</strong>
- * <pre>
+ * <p>
+ * <strong>Example configuration:</strong> <pre>
  * spring:
  *   ai:
  *     a2a:
  *       server:
  *         enabled: true
- * </pre>
- *
- * <p><strong>Custom TaskStore/ConfigProvider:</strong>
- * <pre>
- * &#64;Configuration
- * public class CustomA2AConfiguration {
- *     &#64;Bean
- *     public TaskStore taskStore() {
- *         return new RedisTaskStore();
- *     }
- *
- *     &#64;Bean
- *     public A2AConfigProvider configProvider() {
- *         return new CustomConfigProvider();
- *     }
- * }
  * </pre>
  *
  * @author Ilayaperumal Gopinathan
@@ -71,4 +54,5 @@ public class A2AServerProperties {
 	public void setEnabled(boolean enabled) {
 		this.enabled = enabled;
 	}
+
 }
