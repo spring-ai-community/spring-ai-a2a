@@ -283,6 +283,245 @@ Assistant: Found 3 accommodations in Paris:
 6. Response flows back through A2A protocol
 7. Travel Planner synthesizes final response for user
 
+### Detailed Request Flow: Weather Query Example
+
+Let's trace a real query: "What's the weather in Paris?"
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  Step 1: User Query to Travel Planner (Port 8080)                  │
+└───────────────────────────┬─────────────────────────────────────────┘
+                            │
+                            │ "What's the weather in Paris?"
+                            ▼
+                ┌───────────────────────┐
+                │ Travel Planner Agent  │ (Port 8080)
+                │                       │
+                │ ChatClient with:      │
+                │ • sendMessage tool    │
+                └───────────┬───────────┘
+                            │
+                            │ LLM decides to call Weather Agent
+                            ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  Step 2: A2A Protocol Communication                                 │
+└─────────────────────────────────────────────────────────────────────┘
+
+POST http://localhost:10001/a2a
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "sendMessage",
+  "params": {
+    "message": {
+      "role": "user",
+      "parts": [{"type": "text", "text": "What's the weather in Paris?"}]
+    }
+  },
+  "id": "weather-001"
+}
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  Step 3: Weather Agent Receives Request (Port 10001)               │
+└─────────────────────────────────────────────────────────────────────┘
+
+                ┌───────────────────────┐
+                │ MessageController     │ (@RestController)
+                │ POST /a2a             │
+                └───────────┬───────────┘
+                            │
+                            │ Deserializes JSON-RPC
+                            ▼
+                ┌───────────────────────┐
+                │ RequestHandler        │ (A2A SDK)
+                │ • Creates Task        │
+                │ • Manages lifecycle   │
+                └───────────┬───────────┘
+                            │
+                            │ Task: SUBMITTED → WORKING
+                            ▼
+                ┌───────────────────────┐
+                │ WeatherAgentExecutor  │ (extends AbstractA2AChatClientAgentExecutor)
+                │ processUserMessage()  │
+                └───────────┬───────────┘
+                            │
+                            │ "What's the weather in Paris?"
+                            ▼
+                ┌───────────────────────┐
+                │ ChatClient            │
+                │ + getCurrentWeather   │
+                │ + getWeatherForecast  │
+                └───────────┬───────────┘
+                            │
+                            │ LLM calls getCurrentWeather("Paris")
+                            ▼
+                ┌───────────────────────┐
+                │ WeatherTools          │
+                │ @Tool methods         │
+                └───────────┬───────────┘
+                            │
+                            │ Returns: "Current weather in Paris: Sunny, 72°F"
+                            ▼
+                ┌───────────────────────┐
+                │ Framework wraps       │
+                │ as Task artifact      │
+                │ Task: WORKING →       │
+                │       COMPLETED       │
+                └───────────┬───────────┘
+                            │
+                            ▼
+
+JSON-RPC Response:
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "kind": "task",
+    "taskId": "task-12345"
+  },
+  "id": "weather-001"
+}
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  Step 4: Response Back to Travel Planner                           │
+└─────────────────────────────────────────────────────────────────────┘
+
+                            │
+                            │ Weather agent response
+                            ▼
+                ┌───────────────────────┐
+                │ Travel Planner Agent  │
+                │ Synthesizes response  │
+                └───────────┬───────────┘
+                            │
+                            ▼
+            "Current weather in Paris: Sunny, 72°F (22°C)"
+```
+
+### A2A Protocol Endpoints (Each Agent Exposes)
+
+Every agent in this system automatically exposes three REST endpoints:
+
+#### 1. Message Endpoint: `POST /a2a`
+
+**Purpose**: Main agent communication endpoint
+
+**Used by**: A2A clients calling this agent
+
+**Example** - Calling Weather Agent directly:
+```bash
+curl -X POST http://localhost:10001/a2a \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "sendMessage",
+    "params": {
+      "message": {
+        "role": "user",
+        "parts": [{"type": "text", "text": "What is the weather in Tokyo?"}]
+      }
+    },
+    "id": "1"
+  }'
+```
+
+**Response**:
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "kind": "task",
+    "taskId": "abc-123"
+  },
+  "id": "1"
+}
+```
+
+#### 2. Agent Card Endpoint: `GET /a2a/card`
+
+**Purpose**: Agent discovery and metadata
+
+**Used by**: Clients discovering agent capabilities
+
+**Example**:
+```bash
+# Weather Agent metadata
+curl http://localhost:10001/a2a/card | jq
+
+# Accommodation Agent metadata
+curl http://localhost:10002/a2a/card | jq
+```
+
+**Response Example** (Weather Agent):
+```json
+{
+  "name": "Weather Agent",
+  "description": "Helps with weather forecasts and climate data",
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false
+  },
+  "skills": [{
+    "id": "weather_search",
+    "name": "Weather Search",
+    "description": "Provides current weather and forecasts for any location",
+    "tags": ["weather", "forecast", "climate"],
+    "examples": ["What's the weather in Paris?"]
+  }],
+  "supportedInterfaces": [{
+    "protocol": "JSONRPC",
+    "url": "http://localhost:10001/a2a"
+  }]
+}
+```
+
+#### 3. Task Endpoints: `GET /a2a/tasks/{taskId}`
+
+**Purpose**: Query task status (for long-running operations)
+
+**Example**:
+```bash
+curl http://localhost:10001/a2a/tasks/abc-123
+```
+
+**Response**:
+```json
+{
+  "id": "abc-123",
+  "status": {
+    "state": "COMPLETED",
+    "message": "Task completed successfully"
+  },
+  "artifacts": [{
+    "parts": [{
+      "type": "text",
+      "text": "Current weather in Tokyo: Partly cloudy, 68°F (20°C)"
+    }]
+  }]
+}
+```
+
+### Controller Implementation Details
+
+Each agent automatically gets these controllers via Spring Boot component scanning:
+
+**Location**: `org.springaicommunity.a2a.server.controller`
+
+**Controllers**:
+1. **MessageController** - Handles `POST /a2a` (sendMessage)
+2. **AgentCardController** - Handles `GET /a2a/card`
+3. **TaskController** - Handles `GET /a2a/tasks/{taskId}` and `POST /a2a/tasks/{taskId}/cancel`
+
+**Auto-configured by**:
+```java
+@ComponentScan(basePackages = {
+    "org.springaicommunity.a2a.server.controller"
+})
+```
+
+No manual controller registration needed - everything is automatic!
+
 ## Example Queries
 
 Try these queries in the interactive console:
