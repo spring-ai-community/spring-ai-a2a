@@ -54,11 +54,8 @@ public class MessageController {
 	/**
 	 * Handles sendMessage JSON-RPC requests.
 	 */
-	@PostMapping(
-		path = "${spring.ai.a2a.server.base-path:/a2a}",
-		consumes = MediaType.APPLICATION_JSON_VALUE,
-		produces = MediaType.APPLICATION_JSON_VALUE
-	)
+	@PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE,
+			produces = MediaType.APPLICATION_JSON_VALUE)
 	public SendMessageResponse sendMessage(@RequestBody SendMessageRequest request) throws JSONRPCError {
 
 		MessageSendParams params = request.getParams();
@@ -67,10 +64,10 @@ public class MessageController {
 		try {
 			// Create server call context
 			// TODO: Add support for auth context, state, and extensions
-			ServerCallContext context = new ServerCallContext(
-				null,      // auth context (not used yet)
-				Map.of(),  // state
-				Set.of()   // extensions
+			ServerCallContext context = new ServerCallContext(null, // auth context (not
+																	// used yet)
+					Map.of(), // state
+					Set.of() // extensions
 			);
 
 			// Delegate to SDK's RequestHandler - handles all protocol logic

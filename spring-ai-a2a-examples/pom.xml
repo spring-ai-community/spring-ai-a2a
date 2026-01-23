@@ -17,7 +17,9 @@
 	<description>Examples demonstrating Spring AI A2A usage</description>
 
 	<modules>
-		<module>airbnb-planner-multiagent</module>
+		<module>airbnb-planner/airbnb-agent</module>
+		<module>airbnb-planner/weather-agent</module>
+		<module>airbnb-planner/host-agent</module>
 	</modules>
 
 	<build>

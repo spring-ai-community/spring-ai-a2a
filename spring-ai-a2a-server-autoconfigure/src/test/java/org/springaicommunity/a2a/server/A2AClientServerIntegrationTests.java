@@ -16,10 +16,12 @@
 
 package org.springaicommunity.a2a.server;
 
+import java.util.List;
+
 import io.a2a.server.agentexecution.AgentExecutor;
-import io.a2a.server.agentexecution.RequestContext;
 import io.a2a.spec.AgentCard;
 import org.junit.jupiter.api.Test;
+import org.springaicommunity.a2a.server.executor.DefaultA2AChatClientAgentExecutor;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
@@ -30,14 +32,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
-import org.springaicommunity.a2a.server.executor.AbstractA2AChatClientAgentExecutor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration tests for A2A server auto-configuration.
  *
- * <p>Verifies:
+ * <p>
+ * Verifies:
  * <ul>
  * <li>A2A server starts successfully with auto-configuration</li>
  * <li>Default AgentCard bean is created with correct configuration</li>
@@ -55,21 +57,22 @@ class A2AClientServerIntegrationTests {
 	 */
 	@SpringBootApplication
 	static class TestApplication {
+
 		public static void main(String[] args) {
 			SpringApplication.run(TestApplication.class, args);
 		}
+
 	}
 
 	@TestConfiguration
 	static class TestConfig {
+
 		/**
 		 * Provides a minimal ChatClient bean to trigger auto-configuration.
 		 */
 		@Bean
 		public ChatClient testChatClient(ChatModel chatModel) {
-			return ChatClient.builder(chatModel)
-				.defaultSystem("You are a test agent")
-				.build();
+			return ChatClient.builder(chatModel).defaultSystem("You are a test agent").build();
 		}
 
 		/**
@@ -77,26 +80,11 @@ class A2AClientServerIntegrationTests {
 		 */
 		@Bean
 		public AgentCard testAgentCard() {
-			return new AgentCard(
-				"Spring AI A2A Agent",
-				"A2A agent powered by Spring AI",
-				"http://localhost:58888/a2a",
-				null,
-				"1.0.0",
-				null,
-				new io.a2a.spec.AgentCapabilities(false, false, false, java.util.List.of()),
-				java.util.List.of("text"),
-				java.util.List.of("text"),
-				java.util.List.of(),
-				false,
-				null,
-				null,
-				null,
-				java.util.List.of(new io.a2a.spec.AgentInterface("JSONRPC", "http://localhost:58888/a2a")),
-				"JSONRPC",
-				"0.1.0",
-				null
-			);
+			return new AgentCard("Spring AI A2A Agent", "A2A agent powered by Spring AI", "http://localhost:58888/a2a",
+					null, "1.0.0", null, new io.a2a.spec.AgentCapabilities(false, false, false, List.of()),
+					List.of("text"), List.of("text"), List.of(), false, null, null, null,
+					List.of(new io.a2a.spec.AgentInterface("JSONRPC", "http://localhost:58888/a2a")), "JSONRPC",
+					"0.1.0", null);
 		}
 
 		/**
@@ -104,16 +92,12 @@ class A2AClientServerIntegrationTests {
 		 */
 		@Bean
 		public AgentExecutor testAgentExecutor(ChatClient testChatClient) {
-			return new AbstractA2AChatClientAgentExecutor(testChatClient) {
-				@Override
-				protected String processUserMessage(String userMessage) {
-					return this.chatClient.prompt()
-						.user(userMessage)
-						.call()
-						.content();
-				}
+			return new DefaultA2AChatClientAgentExecutor(testChatClient, (chatClient, requestContext) -> {
+				return DefaultA2AChatClientAgentExecutor.extractTextFromMessage(requestContext.getMessage());
+			}) {
 			};
 		}
+
 	}
 
 	@LocalServerPort

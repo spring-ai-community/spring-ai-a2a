@@ -16,6 +16,9 @@
 
 package org.springaicommunity.a2a.server.controller;
 
+import java.util.Map;
+import java.util.Set;
+
 import io.a2a.server.ServerCallContext;
 import io.a2a.server.requesthandlers.RequestHandler;
 import io.a2a.spec.JSONRPCError;
@@ -24,15 +27,13 @@ import io.a2a.spec.TaskIdParams;
 import io.a2a.spec.TaskQueryParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Map;
-import java.util.Set;
 
 /**
  * REST controller for A2A task operations.
@@ -42,7 +43,7 @@ import java.util.Set;
  * @since 0.1.0
  */
 @RestController
-@RequestMapping("${spring.ai.a2a.server.base-path:/a2a}/tasks")
+@RequestMapping("/tasks")
 public class TaskController {
 
 	private static final Logger logger = LoggerFactory.getLogger(TaskController.class);

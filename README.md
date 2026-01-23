@@ -4,16 +4,15 @@ Spring Boot integration for building AI agent servers using the [A2A Protocol](h
 
 ## Overview
 
-Spring AI A2A provides **server-side** support for exposing Spring AI agents via the A2A protocol. Simply add the dependency, provide `ChatClient` and `AgentCard` beans, and your agent is automatically exposed at `/a2a` endpoint with zero configuration.
+Spring AI A2A provides **server-side** support for exposing Spring AI agents via the A2A protocol. Add the dependency, provide `ChatClient`, `AgentCard`, and `AgentExecutor` beans, and your agent is automatically exposed at `/a2a` endpoint.
 
 ### Key Features
 
 - **A2A Protocol Server**: Expose agents via A2A protocol HTTP/JSON-RPC endpoints
-- **Zero-Configuration**: Just provide ChatClient and AgentCard beans - AgentExecutor auto-configured
 - **Spring AI Integration**: Built on Spring AI's ChatClient
 - **A2A SDK Based**: Uses the official A2A Java SDK (0.3.3.Final)
-- **Automatic Agent Setup**: Framework creates AgentExecutor from ChatClient automatically
 - **Tool Support**: Full support for Spring AI's `@Tool` annotations
+- **Extensible**: Override any auto-configured component
 
 ## Quick Start
 
@@ -35,8 +34,6 @@ Spring AI A2A provides **server-side** support for exposing Spring AI agents via
 
 ### 2. Create Your Agent
 
-#### Simple Agent with Tools
-
 ```java
 @SpringBootApplication
 public class WeatherAgentApplication {
@@ -46,49 +43,53 @@ public class WeatherAgentApplication {
         Use the provided tools to retrieve weather information.
         """;
 
-    @Bean
-    public AgentCard agentCard() {
-        return new AgentCard(
-            "Weather Agent",
-            "Provides weather forecasts and climate data",
-            "http://localhost:8080/a2a",
-            null,
-            "1.0.0",
-            null,
-            new AgentCapabilities(false, false, false, List.of()),
-            List.of("text"),
-            List.of("text"),
-            List.of(),
-            false,
-            null,
-            null,
-            null,
-            List.of(new AgentInterface("JSONRPC", "http://localhost:8080/a2a")),
-            "JSONRPC",
-            "0.3.0",
-            null
-        );
+    public static void main(String[] args) {
+        SpringApplication.run(WeatherAgentApplication.class, args);
     }
 
     @Bean
-    public ChatClient weatherChatClient(
-            ChatClient.Builder chatClientBuilder,
-            WeatherTools weatherTools) {
-
-        return chatClientBuilder.clone()
-            .defaultSystem(SYSTEM_INSTRUCTION)
-            .defaultTools(weatherTools)
+    public AgentCard agentCard(@Value("${server.port:8080}") int port) {
+        return new AgentCard.Builder()
+            .name("Weather Agent")
+            .description("Provides weather forecasts and climate data")
+            .url("http://localhost:" + port + "/a2a/")
+            .version("1.0.0")
+            .capabilities(new AgentCapabilities.Builder().streaming(false).build())
+            .defaultInputModes(List.of("text"))
+            .defaultOutputModes(List.of("text"))
+            .skills(List.of(new AgentSkill.Builder()
+                .id("weather_search")
+                .name("Weather Search")
+                .description("Provides current weather and forecasts")
+                .tags(List.of("weather", "forecast"))
+                .build()))
+            .protocolVersion("0.3.0")
             .build();
     }
 
-    // Note: AgentExecutor is auto-configured from ChatClient bean
+    @Bean
+    public AgentExecutor agentExecutor(
+            ChatClient.Builder chatClientBuilder,
+            WeatherTools weatherTools) {
+
+        ChatClient chatClient = chatClientBuilder.clone()
+            .defaultSystem(SYSTEM_INSTRUCTION)
+            .defaultTools(weatherTools)
+            .build();
+
+        return new DefaultA2AChatClientAgentExecutor(chatClient, (chat, requestContext) -> {
+            String userMessage = DefaultA2AChatClientAgentExecutor
+                .extractTextFromMessage(requestContext.getMessage());
+            return chat.prompt().user(userMessage).call().content();
+        });
+    }
 }
 ```
 
-#### Define Tools
+### 3. Define Tools
 
 ```java
-@Component
+@Service
 public class WeatherTools {
 
     @Tool(description = "Get current weather for a location")
@@ -109,7 +110,7 @@ public class WeatherTools {
 }
 ```
 
-### 3. Configure Application
+### 4. Configure Application
 
 ```yaml
 server:
@@ -125,7 +126,7 @@ spring:
       api-key: ${OPENAI_API_KEY}
 ```
 
-### 4. Run
+### 5. Run
 
 ```bash
 export OPENAI_API_KEY=your-key-here
@@ -206,17 +207,16 @@ Spring AI A2A makes it simple to expose your agents via A2A protocol:
 │  ┌──────────────────────────────┐  │
 │  │   ChatClient (your bean)     │  │
 │  │   AgentCard (your bean)      │  │
-│  └──────────────┬───────────────┘  │
-│                 │                   │
-│                 ▼                   │
-│  ┌──────────────────────────────┐  │
-│  │   AgentExecutor              │  │
-│  │   (auto-configured from      │  │
-│  │    ChatClient)                │  │
+│  │   AgentExecutor (your bean)  │  │
 │  └──────────────┬───────────────┘  │
 │                 │                   │
 │  ┌──────────────▼───────────────┐  │
-│  │  DefaultA2AServer            │  │
+│  │  DefaultA2AChatClientAgent   │  │
+│  │  Executor                    │  │
+│  └──────────────┬───────────────┘  │
+│                 │                   │
+│  ┌──────────────▼───────────────┐  │
+│  │  A2A Server Controllers      │  │
 │  │  (auto-configured)           │  │
 │  └──────────────┬───────────────┘  │
 │                 │                   │
@@ -226,8 +226,7 @@ Spring AI A2A makes it simple to expose your agents via A2A protocol:
 ```
 
 **Key Points**:
-- You provide `ChatClient` and `AgentCard` beans
-- Framework auto-creates `AgentExecutor` from ChatClient
+- You provide `ChatClient`, `AgentCard`, and `AgentExecutor` beans
 - Framework auto-configures A2A server components
 - A2A endpoints exposed automatically at `/a2a`
 
@@ -275,7 +274,7 @@ The framework automatically exposes three REST controllers at the configured `ba
 4. `RequestHandler` invokes your `AgentExecutor.execute()`
 5. Returns `SendMessageResponse` with task event
 
-**Location**: `spring-ai-a2a-server/src/main/java/org/springaicommunity/a2a/server/controller/MessageController.java`
+**Location**: [MessageController.java](spring-ai-a2a-server/src/main/java/org/springaicommunity/a2a/server/controller/MessageController.java)
 
 #### 2. TaskController - Asynchronous Task Management
 
@@ -311,7 +310,7 @@ curl http://localhost:8080/a2a/tasks/abc123
 - `FAILED` - Task encountered an error
 - `CANCELED` - Task was canceled
 
-**Location**: `spring-ai-a2a-server/src/main/java/org/springaicommunity/a2a/server/controller/TaskController.java`
+**Location**: [TaskController.java](spring-ai-a2a-server/src/main/java/org/springaicommunity/a2a/server/controller/TaskController.java)
 
 #### 3. AgentCardController - Agent Discovery
 
@@ -345,7 +344,7 @@ curl http://localhost:8080/a2a/tasks/abc123
 }
 ```
 
-**Location**: `spring-ai-a2a-server/src/main/java/org/springaicommunity/a2a/server/controller/AgentCardController.java`
+**Location**: [AgentCardController.java](spring-ai-a2a-server/src/main/java/org/springaicommunity/a2a/server/controller/AgentCardController.java)
 
 ### Complete Request Flow
 
@@ -379,16 +378,16 @@ Here's how an A2A message flows through the system:
 │                          │                                       │
 │                          ▼                                       │
 │  ┌────────────────────────────────────────────────────────────┐ │
-│  │  3. AgentExecutor (your implementation)                    │ │
-│  │     - AbstractA2AChatClientAgentExecutor                   │ │
+│  │  3. DefaultA2AChatClientAgentExecutor                      │ │
+│  │     - Your AgentExecutor bean                              │ │
 │  │     - Extracts text from A2A Message                       │ │
 │  │     - Updates task state: SUBMITTED → WORKING              │ │
 │  └───────────────────────┬────────────────────────────────────┘ │
 │                          │                                       │
 │                          ▼                                       │
 │  ┌────────────────────────────────────────────────────────────┐ │
-│  │  4. processUserMessage(String) - YOUR CODE                 │ │
-│  │     - Your business logic here                             │ │
+│  │  4. ChatClientExecutorHandler - YOUR CODE                  │ │
+│  │     - Your lambda/function that processes the message      │ │
 │  │     - Calls ChatClient with user message                   │ │
 │  │     - Returns String response                              │ │
 │  └───────────────────────┬────────────────────────────────────┘ │
@@ -403,7 +402,7 @@ Here's how an A2A message flows through the system:
 │                          │                                       │
 │                          ▼                                       │
 │  ┌────────────────────────────────────────────────────────────┐ │
-│  │  6. AbstractA2AChatClientAgentExecutor                     │ │
+│  │  6. DefaultA2AChatClientAgentExecutor                      │ │
 │  │     - Wraps response as TextPart artifact                  │ │
 │  │     - Updates task: WORKING → COMPLETED                    │ │
 │  │     - Adds artifact to task                                │ │
@@ -426,14 +425,14 @@ Here's how an A2A message flows through the system:
 
 1. **MessageController** receives the HTTP POST request and deserializes JSON-RPC
 2. **RequestHandler** (A2A SDK) manages the A2A protocol including task creation
-3. **AgentExecutor** bridges A2A protocol to your ChatClient implementation
-4. **Your Code** (`processUserMessage`) implements the actual business logic
+3. **DefaultA2AChatClientAgentExecutor** bridges A2A protocol to your ChatClient
+4. **ChatClientExecutorHandler** (your lambda) implements the actual business logic
 5. **ChatClient** handles LLM interaction and tool execution
 6. **Response wrapping** happens automatically - you return String, framework wraps as Task artifact
 7. **Task lifecycle** is managed entirely by the framework (SUBMITTED → WORKING → COMPLETED)
 
 **What You Implement**:
-- `processUserMessage(String userMessage)` - Just this one method!
+- `AgentExecutor` bean using `DefaultA2AChatClientAgentExecutor` with a `ChatClientExecutorHandler`
 - Your `@Tool` annotated methods (if needed)
 
 **What Framework Handles**:
@@ -464,7 +463,12 @@ This automatically registers:
 - `TaskStore` - In-memory task storage (override for Redis/Database)
 - `QueueManager` - Event queue management
 - `RequestHandler` - A2A SDK request processor
-- `AgentExecutor` - Created from your ChatClient bean
+- `A2AConfigProvider` - Configuration from `META-INF/a2a-defaults.properties`
+- `PushNotificationConfigStore` - Push notification configuration
+- `PushNotificationSender` - No-op implementation (override to enable)
+- `Executor` - Thread pool for async operations
+
+**Note**: You must provide your own `AgentExecutor`, `ChatClient`, and `AgentCard` beans.
 
 **Conditional Configuration**:
 ```yaml
@@ -561,16 +565,9 @@ public class RemoteAgentConnections {
 
 The `spring-ai-a2a-examples/` directory contains complete working examples:
 
-### Simple Agents
+### Multi-Agent System: Airbnb Planner
 
-- **weather-agent** - Weather forecasting with mock tools
-- **airbnb-agent** - Hotel and accommodation recommendations with mock search
-
-Both use zero-config pattern: just provide ChatClient and AgentCard beans, AgentExecutor is auto-configured.
-
-### Multi-Agent System
-
-- **airbnb-planner-multiagent** - Host agent that orchestrates weather and airbnb agents for travel planning
+- **airbnb-planner** - Host agent that orchestrates weather and airbnb agents for travel planning
 
 This example demonstrates:
 - LLM-driven agent orchestration
@@ -578,18 +575,21 @@ This example demonstrates:
 - Automatic agent discovery
 - Tool-based agent delegation
 
-See [airbnb-planner-multiagent/README.md](spring-ai-a2a-examples/airbnb-planner-multiagent/README.md) for detailed documentation.
+**Components**:
+- `weather-agent` - Weather forecasting agent (Port 10001)
+- `airbnb-agent` - Accommodation search agent (Port 10002)
+- `host-agent` - Orchestrator agent (Port 8080)
 
 ## Project Structure
 
 ```
 spring-ai-a2a/
 ├── spring-ai-a2a-server/              # A2A protocol server implementation
-│   ├── executor/                      # AbstractA2AChatClientAgentExecutor
+│   ├── executor/                      # DefaultA2AChatClientAgentExecutor, ChatClientExecutorHandler
 │   └── controller/                    # MessageController, TaskController, AgentCardController
 ├── spring-ai-a2a-server-autoconfigure/ # Spring Boot auto-configuration
 └── spring-ai-a2a-examples/            # Example applications
-    └── airbnb-planner-multiagent/     # Multi-agent example
+    └── airbnb-planner/                # Multi-agent example
         ├── weather-agent/             # Weather forecasting agent (Port 10001)
         ├── airbnb-agent/              # Accommodation search agent (Port 10002)
         └── host-agent/                # Orchestrator agent (Port 8080)
@@ -633,66 +633,44 @@ spring:
       server:
         enabled: true          # Enable A2A server
         base-path: /a2a        # Base path for endpoints
-      agent:
-        name: "My Agent"
-        description: "Agent description"
-        version: "1.0.0"
-        protocol-version: "0.3.0"
 ```
 
 ## Implementation Patterns
 
-### Pattern 1: Simple Agent with AbstractA2AChatClientAgentExecutor
+### Pattern 1: Simple Agent with DefaultA2AChatClientAgentExecutor
 
-Best for most agents - extend AbstractA2AChatClientAgentExecutor and implement one method:
+Best for most agents - use `DefaultA2AChatClientAgentExecutor` with a `ChatClientExecutorHandler` lambda:
 
 ```java
 @Bean
-public AgentCard agentCard() {
-    return new AgentCard(
-        "My Agent",
-        "Description of what my agent does",
-        "http://localhost:8080/a2a",
-        null,
-        "1.0.0",
-        null,
-        new AgentCapabilities(false, false, false, List.of()),
-        List.of("text"),
-        List.of("text"),
-        List.of(),
-        false,
-        null,
-        null,
-        null,
-        List.of(new AgentInterface("JSONRPC", "http://localhost:8080/a2a")),
-        "JSONRPC",
-        "0.3.0",
-        null
-    );
-}
-
-@Bean
-public ChatClient myChatClient(
-        ChatClient.Builder chatClientBuilder,
-        MyTools tools) {
-
-    return chatClientBuilder.clone()
-        .defaultSystem("You are a helpful assistant...")
-        .defaultTools(tools)
+public AgentCard agentCard(@Value("${server.port:8080}") int port) {
+    return new AgentCard.Builder()
+        .name("My Agent")
+        .description("Description of what my agent does")
+        .url("http://localhost:" + port + "/a2a/")
+        .version("1.0.0")
+        .capabilities(new AgentCapabilities.Builder().streaming(false).build())
+        .defaultInputModes(List.of("text"))
+        .defaultOutputModes(List.of("text"))
+        .protocolVersion("0.3.0")
         .build();
 }
 
 @Bean
-public AgentExecutor myAgentExecutor(ChatClient myChatClient) {
-    return new AbstractA2AChatClientAgentExecutor(myChatClient) {
-        @Override
-        protected String processUserMessage(String userMessage) {
-            return this.chatClient.prompt()
-                .user(userMessage)
-                .call()
-                .content();
-        }
-    };
+public AgentExecutor agentExecutor(
+        ChatClient.Builder chatClientBuilder,
+        MyTools tools) {
+
+    ChatClient chatClient = chatClientBuilder.clone()
+        .defaultSystem("You are a helpful assistant...")
+        .defaultTools(tools)
+        .build();
+
+    return new DefaultA2AChatClientAgentExecutor(chatClient, (chat, requestContext) -> {
+        String userMessage = DefaultA2AChatClientAgentExecutor
+            .extractTextFromMessage(requestContext.getMessage());
+        return chat.prompt().user(userMessage).call().content();
+    });
 }
 ```
 
@@ -702,10 +680,10 @@ public AgentExecutor myAgentExecutor(ChatClient myChatClient) {
 - No custom execution logic needed
 
 **How it works**:
-- You provide ChatClient and AgentCard beans
-- Create AgentExecutor extending AbstractA2AChatClientAgentExecutor
-- Implement single method: `processUserMessage(String userMessage)`
-- Framework handles A2A protocol and exposes endpoints at `/a2a`
+- You provide `ChatClient`, `AgentCard`, and `AgentExecutor` beans
+- `DefaultA2AChatClientAgentExecutor` handles A2A protocol and task lifecycle
+- Your `ChatClientExecutorHandler` lambda implements the business logic
+- Framework exposes endpoints at `/a2a`
 
 ### Pattern 2: Custom AgentExecutor
 
@@ -755,7 +733,7 @@ public class MyCustomAgent implements AgentExecutor {
                 .content();
 
             // Add result as artifact
-            updater.addArtifact(List.of(new TextPart(response)));
+            updater.addArtifact(List.of(new TextPart(response)), null, null, null);
 
             // Mark complete
             updater.complete();
@@ -874,17 +852,21 @@ public class RemoteAgentTools {
 }
 
 @Bean
-public ChatClient orchestratorChatClient(
+public AgentExecutor orchestratorExecutor(
         ChatClient.Builder chatClientBuilder,
         RemoteAgentTools tools) {
 
-    return chatClientBuilder.clone()
+    ChatClient chatClient = chatClientBuilder.clone()
         .defaultSystem("You are an orchestrator that delegates to specialized agents...")
         .defaultTools(tools)
         .build();
-}
 
-// AgentExecutor is auto-configured from ChatClient bean
+    return new DefaultA2AChatClientAgentExecutor(chatClient, (chat, requestContext) -> {
+        String userMessage = DefaultA2AChatClientAgentExecutor
+            .extractTextFromMessage(requestContext.getMessage());
+        return chat.prompt().user(userMessage).call().content();
+    });
+}
 ```
 
 **Use when**:
@@ -893,7 +875,7 @@ public ChatClient orchestratorChatClient(
 - Composing agent capabilities
 - LLM-driven agent orchestration
 
-See the [airbnb-planner-multiagent example](spring-ai-a2a-examples/airbnb-planner-multiagent/) for a complete implementation.
+See the [airbnb-planner example](spring-ai-a2a-examples/airbnb-planner/) for a complete implementation.
 
 ## Building
 
@@ -905,7 +887,7 @@ mvn clean install
 mvn clean install -DskipTests
 
 # Run an example
-cd spring-ai-a2a-examples/airbnb-planner-multiagent/weather-agent
+cd spring-ai-a2a-examples/airbnb-planner/weather-agent
 mvn spring-boot:run
 ```
 
@@ -934,7 +916,7 @@ mvn test -pl spring-ai-a2a-integration-tests
 **Issue**: Requests hang or timeout
 
 **Solution**:
-- Check agent executor is registered as Spring bean
+- Check `AgentExecutor` is registered as Spring bean
 - Verify OpenAI API key is set
 - Increase timeout in `a2a-defaults.properties`
 
@@ -952,7 +934,7 @@ mvn test -pl spring-ai-a2a-integration-tests
 **Issue**: Agent doesn't call tools
 
 **Solution**:
-- Verify tools are Spring beans (`@Component` or `@Bean`)
+- Verify tools are Spring beans (`@Component` or `@Service`)
 - Check tool descriptions are clear
 - Ensure tools are registered with ChatClient via `.defaultTools()`
 
