@@ -58,7 +58,7 @@ public class MessageController {
 	public SendMessageResponse sendMessage(@RequestBody SendMessageRequest request) throws JSONRPCError {
 
 		MessageSendParams params = request.getParams();
-		logger.info("Received sendMessage request - id: {}", request.getId());
+		logger.debug("Received sendMessage request - id: {}", request.getId());
 
 		try {
 			// Create server call context
@@ -70,9 +70,9 @@ public class MessageController {
 			);
 
 			// Delegate to SDK's RequestHandler - handles all protocol logic
-			EventKind result = requestHandler.onMessageSend(params, context);
+			EventKind result = this.requestHandler.onMessageSend(params, context);
 
-			logger.info("Message processed successfully - id: {}", request.getId());
+			logger.debug("Message processed successfully - id: {}", request.getId());
 			return new SendMessageResponse(request.getId(), result);
 		}
 		catch (JSONRPCError e) {

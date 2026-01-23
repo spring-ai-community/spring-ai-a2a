@@ -47,8 +47,8 @@ public class AgentCardController {
 	 */
 	@GetMapping(path = "/.well-known/agent-card.json", produces = MediaType.APPLICATION_JSON_VALUE)
 	public AgentCard getAgentCard() {
-		logger.debug("Serving agent card: {}", agentCard.name());
-		return agentCard;
+		logger.debug("Serving agent card: {}", this.agentCard.name());
+		return this.agentCard;
 	}
 
 	/**
@@ -58,8 +58,8 @@ public class AgentCardController {
 	 */
 	@GetMapping(path = "/card", produces = MediaType.APPLICATION_JSON_VALUE)
 	public AgentCard getAgentCardV1() {
-		logger.debug("Serving agent card via /card: {}", agentCard.name());
-		return agentCard;
+		logger.debug("Serving agent card via /card: {}", this.agentCard.name());
+		return this.agentCard;
 	}
 
 }

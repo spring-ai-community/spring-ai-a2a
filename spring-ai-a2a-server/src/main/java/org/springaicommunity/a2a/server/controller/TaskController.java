@@ -65,8 +65,8 @@ public class TaskController {
 			ServerCallContext context = new ServerCallContext(null, Map.of(), Set.of());
 			TaskQueryParams params = new TaskQueryParams(taskId);
 
-			Task task = requestHandler.onGetTask(params, context);
-			logger.info("Task retrieved: {} - state: {}", taskId, task.getStatus().state());
+			Task task = this.requestHandler.onGetTask(params, context);
+			logger.debug("Task retrieved: {} - state: {}", taskId, task.getStatus().state());
 			return task;
 		}
 		catch (JSONRPCError e) {
@@ -90,8 +90,8 @@ public class TaskController {
 			ServerCallContext context = new ServerCallContext(null, Map.of(), Set.of());
 			TaskIdParams params = new TaskIdParams(taskId);
 
-			Task task = requestHandler.onCancelTask(params, context);
-			logger.info("Task cancelled: {}", taskId);
+			Task task = this.requestHandler.onCancelTask(params, context);
+			logger.debug("Task cancelled: {}", taskId);
 			return task;
 		}
 		catch (JSONRPCError e) {

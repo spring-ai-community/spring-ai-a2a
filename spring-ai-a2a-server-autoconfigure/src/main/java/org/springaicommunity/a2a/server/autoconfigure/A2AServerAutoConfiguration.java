@@ -52,7 +52,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
 
 /**
  * Spring Boot auto-configuration for A2A Server.
@@ -83,16 +82,19 @@ public class A2AServerAutoConfiguration {
 	}
 
 	@Bean
+	@ConditionalOnMissingBean
 	AgentCardController agentCardController(AgentCard agentCard) {
 		return new AgentCardController(agentCard);
 	}
 
 	@Bean
+	@ConditionalOnMissingBean
 	MessageController messageController(RequestHandler requestHandler) {
 		return new MessageController(requestHandler);
 	}
 
 	@Bean
+	@ConditionalOnMissingBean
 	TaskController taskController(RequestHandler requestHandler) {
 		return new TaskController(requestHandler);
 	}

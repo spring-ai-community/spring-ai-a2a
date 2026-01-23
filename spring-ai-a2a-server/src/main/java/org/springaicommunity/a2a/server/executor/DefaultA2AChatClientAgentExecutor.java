@@ -108,7 +108,7 @@ public class DefaultA2AChatClientAgentExecutor implements AgentExecutor {
 
 	@Override
 	public void cancel(RequestContext context, EventQueue eventQueue) throws JSONRPCError {
-		logger.info("Cancelling task: {}", context.getTaskId());
+		logger.debug("Cancelling task: {}", context.getTaskId());
 		TaskUpdater updater = new TaskUpdater(context, eventQueue);
 		updater.cancel();
 	}
