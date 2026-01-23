@@ -57,10 +57,7 @@ public class TaskController {
 	/**
 	 * Returns task status and results.
 	 */
-	@GetMapping(
-		path = "/{taskId}",
-		produces = MediaType.APPLICATION_JSON_VALUE
-	)
+	@GetMapping(path = "/{taskId}", produces = MediaType.APPLICATION_JSON_VALUE)
 	public Task getTask(@PathVariable String taskId) throws JSONRPCError {
 		logger.info("Getting task: {}", taskId);
 
@@ -85,10 +82,7 @@ public class TaskController {
 	/**
 	 * Cancels a running task.
 	 */
-	@PostMapping(
-		path = "/{taskId}/cancel",
-		produces = MediaType.APPLICATION_JSON_VALUE
-	)
+	@PostMapping(path = "/{taskId}/cancel", produces = MediaType.APPLICATION_JSON_VALUE)
 	public Task cancelTask(@PathVariable String taskId) throws JSONRPCError {
 		logger.info("Cancelling task: {}", taskId);
 

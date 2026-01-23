@@ -34,15 +34,17 @@ import org.springframework.ai.chat.client.ChatClient;
 /**
  * Base class for A2A AgentExecutors using Spring AI ChatClient.
  *
- * <p>This executor handles Task-based execution, managing the complete task lifecycle:
+ * <p>
+ * This executor handles Task-based execution, managing the complete task lifecycle:
  * <ul>
- *   <li>Creates and submits task via {@link TaskUpdater}</li>
- *   <li>Extracts user message from A2A protocol {@link Message}</li>
- *   <li>Delegates to {@link #processUserMessage(String)} for agent-specific logic</li>
- *   <li>Wraps response as task artifact and completes the task</li>
+ * <li>Creates and submits task via {@link TaskUpdater}</li>
+ * <li>Extracts user message from A2A protocol {@link Message}</li>
+ * <li>Delegates to {@link #processUserMessage(String)} for agent-specific logic</li>
+ * <li>Wraps response as task artifact and completes the task</li>
  * </ul>
  *
- * <p>Implementations only need to provide the {@link #processUserMessage(String)} method
+ * <p>
+ * Implementations only need to provide the {@link #processUserMessage(String)} method
  * that takes a simple String and returns a String response. All A2A protocol complexity
  * and task management is handled by this base class.
  *
@@ -58,7 +60,8 @@ public class DefaultA2AChatClientAgentExecutor implements AgentExecutor {
 
 	private final ChatClientExecutorHandler chatClientExecutorHandler;
 
-	public DefaultA2AChatClientAgentExecutor(ChatClient chatClient, ChatClientExecutorHandler chatClientExecutorHandler) {
+	public DefaultA2AChatClientAgentExecutor(ChatClient chatClient,
+			ChatClientExecutorHandler chatClientExecutorHandler) {
 		this.chatClient = chatClient;
 		this.chatClientExecutorHandler = chatClientExecutorHandler;
 	}
@@ -70,7 +73,8 @@ public class DefaultA2AChatClientAgentExecutor implements AgentExecutor {
 		if (message == null || message.getParts() == null) {
 			return "";
 		}
-		return message.getParts().stream()
+		return message.getParts()
+			.stream()
 			.filter(part -> part instanceof TextPart)
 			.map(part -> ((TextPart) part).getText())
 			.collect(Collectors.joining())
@@ -88,7 +92,8 @@ public class DefaultA2AChatClientAgentExecutor implements AgentExecutor {
 			updater.startWork();
 
 			// Call user's method with clean string parameter
-			String response = this.chatClientExecutorHandler.execute(this.chatClient, context);;
+			String response = this.chatClientExecutorHandler.execute(this.chatClient, context);
+			;
 
 			logger.debug("AI Response: {}", response);
 

@@ -34,8 +34,9 @@ import java.util.Properties;
 /**
  * Default A2A configuration provider implementation.
  *
- * <p>Loads configuration from {@code META-INF/a2a-defaults.properties} on the classpath.
- * If no configuration files are found, uses hardcoded defaults.
+ * <p>
+ * Loads configuration from {@code META-INF/a2a-defaults.properties} on the classpath. If
+ * no configuration files are found, uses hardcoded defaults.
  *
  * @author Ilayaperumal Gopinathan
  * @author Christian Tzolov
@@ -50,8 +51,8 @@ public class DefaultA2AConfigProvider implements A2AConfigProvider, Initializing
 	private final ResourcePatternResolver resourceResolver;
 
 	/**
-	 * Cached configuration values, loaded during bean initialization.
-	 * Guaranteed to be non-null after {@link #afterPropertiesSet()} completes.
+	 * Cached configuration values, loaded during bean initialization. Guaranteed to be
+	 * non-null after {@link #afterPropertiesSet()} completes.
 	 */
 	private Map<String, String> configCache;
 
@@ -130,8 +131,7 @@ public class DefaultA2AConfigProvider implements A2AConfigProvider, Initializing
 							}
 						}
 
-						logger.debug("Loaded {} configuration values from {}", props.size(),
-								resource.getDescription());
+						logger.debug("Loaded {} configuration values from {}", props.size(), resource.getDescription());
 					}
 					catch (IOException e) {
 						logger.warn("Failed to read configuration from {}: {}", resource.getDescription(),

@@ -54,8 +54,7 @@ public class MessageController {
 	/**
 	 * Handles sendMessage JSON-RPC requests.
 	 */
-	@PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE,
-			produces = MediaType.APPLICATION_JSON_VALUE)
+	@PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public SendMessageResponse sendMessage(@RequestBody SendMessageRequest request) throws JSONRPCError {
 
 		MessageSendParams params = request.getParams();
