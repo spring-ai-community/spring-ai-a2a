@@ -8,7 +8,7 @@
 	<parent>
 		<groupId>org.springaicommunity</groupId>
 		<artifactId>spring-ai-a2a-parent</artifactId>
-		<version>0.1.0-SNAPSHOT</version>
+		<version>0.2.0-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>spring-ai-a2a-examples</artifactId>
