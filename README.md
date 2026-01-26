@@ -226,17 +226,32 @@ spring-ai-a2a/
 
 ## Configuration
 
-**A2A defaults** (`META-INF/a2a-defaults.properties`):
-```properties
-a2a.blocking.agent.timeout.seconds=30
-a2a.executor.max-pool-size=50
+**Spring Boot** (`application.properties` or `application.yml`):
+```yaml
+spring:
+  ai:
+    a2a:
+      server:
+        enabled: true
+
+server:
+  servlet:
+    context-path: /a2a
 ```
 
-**Spring Boot:**
-```yaml
-spring.ai.a2a.server.enabled: true
-server.servlet.context-path: /a2a
+**A2A SDK properties** can be configured directly in Spring's Environment (application.properties, environment variables, etc.):
+```properties
+# Blocking call timeouts
+a2a.blocking.agent.timeout.seconds=30
+a2a.blocking.consumption.timeout.seconds=5
+
+# Thread pool configuration
+a2a.executor.core-pool-size=5
+a2a.executor.max-pool-size=50
+a2a.executor.keep-alive-seconds=60
 ```
+
+The `SpringA2AConfigProvider` first checks Spring's `Environment` for property values and falls back to the SDK's `DefaultValuesConfigProvider` for any missing keys. This follows the [custom config provider pattern](https://github.com/a2aproject/a2a-java/blob/main/integrations/microprofile-config/README.md#custom-config-providers) recommended by the A2A Java SDK.
 
 ## Building & Testing
 
