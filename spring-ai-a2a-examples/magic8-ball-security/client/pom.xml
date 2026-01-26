@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>4.0.1</version>
+		<relativePath /> <!-- lookup parent from repository -->
+	</parent>
+	<groupId>org.springaicommunity.a2a.examples.airbnb</groupId>
+	<artifactId>host-agent</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+
+	<name>Host Agent (A2A Client Example)</name>
+	<description>
+		Demonstrates how to use A2A Java SDK to call remote A2A agents.
+		Shows coordinating with multiple remote agents (weather, airbnb) programmatically.
+	</description>
+	
+	<properties>
+		<java.version>17</java.version>
+		<maven.deploy.skip>true</maven.deploy.skip>
+		<io.a2a.sdk.version>0.3.3.Final</io.a2a.sdk.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webmvc</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-model-anthropic</artifactId>
+		</dependency>
+		
+		<dependency>
+			<groupId>io.github.a2asdk</groupId>
+			<artifactId>a2a-java-sdk-client</artifactId>
+			<version>${io.a2a.sdk.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>io.github.a2asdk</groupId>
+			<artifactId>a2a-java-sdk-client-transport-jsonrpc</artifactId>
+			<version>${io.a2a.sdk.version}</version>
+		</dependency>
+
+
+		<!-- Netty DNS resolver for macOS -->
+		<dependency>
+			<groupId>io.netty</groupId>
+			<artifactId>netty-resolver-dns-native-macos</artifactId>
+			<classifier>osx-aarch_64</classifier>
+		</dependency>
+
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webmvc-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.ai</groupId>
+				<artifactId>spring-ai-bom</artifactId>
+				<version>2.0.0-M1</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>

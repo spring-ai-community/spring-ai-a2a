@@ -20,6 +20,9 @@
 		<module>airbnb-planner/airbnb-agent</module>
 		<module>airbnb-planner/weather-agent</module>
 		<module>airbnb-planner/host-agent</module>
+		
+		
+		<module>magic8-ball-security/server</module>
 	</modules>
 
 	<build>
