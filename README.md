@@ -1,7 +1,7 @@
 # Spring AI A2A
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Maven Central](https://img.shields.io/maven-central/v/org.springaicommunity/spring-ai-a2a.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/org.springaicommunity/spring-ai-a2a)
+[![Maven Central](https://img.shields.io/maven-central/v/org.springaicommunity/spring-ai-a2a-server-autoconfigure.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/org.springaicommunity/spring-ai-a2a-server-autoconfigure)
 [![Java Version](https://img.shields.io/badge/Java-17%2B-orange)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
 
 Spring Boot integration for building AI agent servers using the [A2A Protocol](https://a2a.anthropic.com/).
