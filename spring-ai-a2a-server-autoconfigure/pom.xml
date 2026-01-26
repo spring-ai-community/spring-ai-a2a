@@ -7,7 +7,7 @@
 	<parent>
 		<groupId>org.springaicommunity</groupId>
 		<artifactId>spring-ai-a2a-parent</artifactId>
-		<version>0.1.0</version>
+		<version>0.1.1-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>spring-ai-a2a-server-autoconfigure</artifactId>
