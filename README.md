@@ -263,7 +263,7 @@ cd spring-ai-a2a-examples/airbnb-planner/weather-agent && mvn spring-boot:run
 
 ## Requirements
 
-Java 17+ • Maven 3.8+ • Spring Boot 4.0+ • Spring AI 2.0.0-M1+ • A2A SDK 0.3.3.Final
+Java 17+ • Maven 3.8+ • Spring Boot 4.0+ • Spring AI 2.0.0-M2+ • A2A SDK 0.3.3.Final
 
 ## Troubleshooting
 

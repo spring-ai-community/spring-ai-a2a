@@ -338,7 +338,7 @@
 						<configuration>
 							<publishingServerId>central</publishingServerId>
 							<excludeArtifacts>
-								spring-ai-a2a-parent,spring-ai-a2a-examples
+								spring-ai-a2a-parent,spring-ai-a2a-examples,airbnb-agent,weather-agent,host-agent
 							</excludeArtifacts>
 							<autoPublish>true</autoPublish>
 						</configuration>
