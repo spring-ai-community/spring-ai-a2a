@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.a2a.server.agentexecution.AgentExecutor;
-import io.a2a.server.config.A2AConfigProvider;
+import io.a2a.server.config.DefaultValuesConfigProvider;
 import io.a2a.server.events.InMemoryQueueManager;
 import io.a2a.server.events.QueueManager;
 import io.a2a.server.requesthandlers.DefaultRequestHandler;
@@ -52,6 +52,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.env.Environment;
 
 /**
  * Spring Boot auto-configuration for A2A Server.
@@ -109,14 +110,21 @@ public class A2AServerAutoConfiguration {
 		return new InMemoryTaskStore();
 	}
 
+	@Bean
+	DefaultValuesConfigProvider defaultValuesConfigProvider() {
+		return new DefaultValuesConfigProvider();
+	}
+
 	/**
-	 * Provide default A2AConfigProvider (DefaultA2AConfigProvider).
+	 * Configuration provider for A2A settings. If a property is not found in the Spring
+	 * Environment, it falls back to default values provided by
+	 * DefaultValuesConfigProvider.
 	 */
 	@Bean
-	@ConditionalOnMissingBean
-	public A2AConfigProvider configProvider() {
-		logger.info("Auto-configuring DefaultA2AConfigProvider for configuration");
-		return new DefaultA2AConfigProvider();
+	public SpringA2AConfigProvider configProvider(Environment environment,
+			DefaultValuesConfigProvider defaultValuesConfigProvider) {
+		logger.info("Auto-configuring SpringA2AConfigProvider for configuration");
+		return new SpringA2AConfigProvider(environment, defaultValuesConfigProvider);
 	}
 
 	/**
@@ -160,7 +168,7 @@ public class A2AServerAutoConfiguration {
 	@Bean
 	@Qualifier("a2aInternal")
 	@ConditionalOnMissingBean(name = "a2aInternalExecutor")
-	public Executor a2aInternalExecutor(A2AConfigProvider configProvider) {
+	public Executor a2aInternalExecutor(SpringA2AConfigProvider configProvider) {
 		int corePoolSize = Integer.parseInt(configProvider.getValue("a2a.executor.core-pool-size"));
 		int maxPoolSize = Integer.parseInt(configProvider.getValue("a2a.executor.max-pool-size"));
 		long keepAliveSeconds = Long.parseLong(configProvider.getValue("a2a.executor.keep-alive-seconds"));

@@ -25,6 +25,9 @@ import io.a2a.server.events.EventQueue;
 import io.a2a.server.tasks.TaskUpdater;
 import io.a2a.spec.JSONRPCError;
 import io.a2a.spec.Message;
+import io.a2a.spec.Task;
+import io.a2a.spec.TaskNotCancelableError;
+import io.a2a.spec.TaskState;
 import io.a2a.spec.TextPart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,7 +96,6 @@ public class DefaultA2AChatClientAgentExecutor implements AgentExecutor {
 
 			// Call user's method with clean string parameter
 			String response = this.chatClientExecutorHandler.execute(this.chatClient, context);
-			;
 
 			logger.debug("AI Response: {}", response);
 
@@ -109,6 +111,19 @@ public class DefaultA2AChatClientAgentExecutor implements AgentExecutor {
 	@Override
 	public void cancel(RequestContext context, EventQueue eventQueue) throws JSONRPCError {
 		logger.debug("Cancelling task: {}", context.getTaskId());
+
+		final Task task = context.getTask();
+
+		if (task.getStatus().state() == TaskState.CANCELED) {
+			// task already cancelled
+			throw new TaskNotCancelableError();
+		}
+
+		if (task.getStatus().state() == TaskState.COMPLETED) {
+			// task already completed
+			throw new TaskNotCancelableError();
+		}
+
 		TaskUpdater updater = new TaskUpdater(context, eventQueue);
 		updater.cancel();
 	}
