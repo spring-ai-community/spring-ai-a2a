@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-		 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
@@ -14,6 +13,28 @@
 	<artifactId>spring-ai-a2a-server</artifactId>
 	<name>Spring AI A2A Server</name>
 	<description>Server implementation for Spring AI A2A protocol support</description>
+	<url>https://github.com/spring-ai-community/spring-ai-a2a</url>
+
+	<licenses>
+		<license>
+			<name>Apache License, Version 2.0</name>
+			<url>https://www.apache.org/licenses/LICENSE-2.0</url>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<name>Spring AI Community</name>
+			<organization>Spring AI Community</organization>
+			<organizationUrl>https://github.com/spring-ai-community</organizationUrl>
+		</developer>
+	</developers>
+
+	<scm>
+		<connection>scm:git:git://github.com/spring-ai-community/spring-ai-a2a.git</connection>
+		<developerConnection>scm:git:ssh://git@github.com/spring-ai-community/spring-ai-a2a.git</developerConnection>
+		<url>https://github.com/spring-ai-community/spring-ai-a2a</url>
+	</scm>
 
 	<dependencies>
 		<!-- A2A Java SDK -->
