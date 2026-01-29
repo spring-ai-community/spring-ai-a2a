@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory;
 import org.springaicommunity.a2a.server.controller.AgentCardController;
 import org.springaicommunity.a2a.server.controller.MessageController;
 import org.springaicommunity.a2a.server.controller.TaskController;
-import org.springaicommunity.a2a.server.executor.DefaultA2AChatClientAgentExecutor;
+import org.springaicommunity.a2a.server.executor.DefaultAgentExecutor;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -193,8 +193,7 @@ public class A2AServerAutoConfiguration {
 	 *
 	 * <p>
 	 * Note: Applications must provide their own {@link AgentExecutor} bean by extending
-	 * {@link DefaultA2AChatClientAgentExecutor} and implementing the
-	 * {@code executeAsMessage} method.
+	 * {@link DefaultAgentExecutor} and implementing the {@code executeAsMessage} method.
 	 */
 	@Bean
 	@ConditionalOnMissingBean

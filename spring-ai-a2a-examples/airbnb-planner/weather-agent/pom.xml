@@ -21,7 +21,7 @@
 	<properties>
 		<java.version>17</java.version>
 		<maven.deploy.skip>true</maven.deploy.skip>
-		<spring-ai-a2a.version>0.1.0-SNAPSHOT</spring-ai-a2a.version>
+		<spring-ai-a2a.version>0.2.0-SNAPSHOT</spring-ai-a2a.version>
 	</properties>
 
 	<dependencies>

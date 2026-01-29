@@ -55,16 +55,15 @@ import org.springframework.ai.chat.client.ChatClient;
  * @author Christian Tzolov
  * @since 0.1.0
  */
-public class DefaultA2AChatClientAgentExecutor implements AgentExecutor {
+public class DefaultAgentExecutor implements AgentExecutor {
 
-	private static final Logger logger = LoggerFactory.getLogger(DefaultA2AChatClientAgentExecutor.class);
+	private static final Logger logger = LoggerFactory.getLogger(DefaultAgentExecutor.class);
 
 	private final ChatClient chatClient;
 
 	private final ChatClientExecutorHandler chatClientExecutorHandler;
 
-	public DefaultA2AChatClientAgentExecutor(ChatClient chatClient,
-			ChatClientExecutorHandler chatClientExecutorHandler) {
+	public DefaultAgentExecutor(ChatClient chatClient, ChatClientExecutorHandler chatClientExecutorHandler) {
 		this.chatClient = chatClient;
 		this.chatClientExecutorHandler = chatClientExecutorHandler;
 	}

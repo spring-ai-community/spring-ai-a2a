@@ -64,8 +64,8 @@ public class WeatherAgentApplication {
             .defaultTools(tools)
             .build();
 
-        return new DefaultA2AChatClientAgentExecutor(chatClient, (chat, ctx) -> {
-            String userMessage = DefaultA2AChatClientAgentExecutor.extractTextFromMessage(ctx.getMessage());
+        return new DefaultAgentExecutor(chatClient, (chat, ctx) -> {
+            String userMessage = DefaultAgentExecutor.extractTextFromMessage(ctx.getMessage());
             return chat.prompt().user(userMessage).call().content();
         });
     }
@@ -130,7 +130,7 @@ client.sendMessage(new Message.Builder().role(Message.Role.USER)
 ```
 Your Spring Boot App
 ├── ChatClient, AgentCard, AgentExecutor (your beans)
-├── DefaultA2AChatClientAgentExecutor (bridges A2A ↔ ChatClient)
+├── DefaultAgentExecutor (bridges A2A ↔ ChatClient)
 └── A2A Controllers (auto-configured)
     ├── POST /      → MessageController (sendMessage)
     ├── GET  /card  → AgentCardController (discovery)
@@ -140,7 +140,7 @@ Your Spring Boot App
 **Request Flow:**
 1. `MessageController` receives JSON-RPC request
 2. A2A SDK `RequestHandler` creates task
-3. `DefaultA2AChatClientAgentExecutor` invokes your `ChatClientExecutorHandler`
+3. `DefaultAgentExecutor` invokes your `ChatClientExecutorHandler`
 4. `ChatClient` calls LLM and executes tools
 5. Response wrapped as task artifact → returned to client
 
@@ -151,14 +151,14 @@ Your Spring Boot App
 
 ### Pattern 1: Simple Agent (Recommended)
 
-Use `DefaultA2AChatClientAgentExecutor` with a lambda:
+Use `DefaultAgentExecutor` with a lambda:
 
 ```java
 @Bean
 public AgentExecutor agentExecutor(ChatClient.Builder builder, MyTools tools) {
     ChatClient chatClient = builder.clone().defaultSystem("...").defaultTools(tools).build();
-    return new DefaultA2AChatClientAgentExecutor(chatClient, (chat, ctx) -> {
-        String msg = DefaultA2AChatClientAgentExecutor.extractTextFromMessage(ctx.getMessage());
+    return new DefaultAgentExecutor(chatClient, (chat, ctx) -> {
+        String msg = DefaultAgentExecutor.extractTextFromMessage(ctx.getMessage());
         return chat.prompt().user(msg).call().content();
     });
 }

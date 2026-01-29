@@ -23,8 +23,8 @@ import org.springframework.ai.chat.client.ChatClient;
  * Executes ChatClient operations with A2A RequestContext for A2A agents.
  *
  * <p>
- * This interface is used internally by {@link DefaultA2AChatClientAgentExecutor} for
- * executing ChatClient operations in response to A2A protocol requests.
+ * This interface is used internally by {@link DefaultAgentExecutor} for executing
+ * ChatClient operations in response to A2A protocol requests.
  *
  * @author Ilayaperumal Gopinathan
  * @since 0.1.0

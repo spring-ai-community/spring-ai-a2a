@@ -9,7 +9,7 @@ import io.a2a.spec.AgentCard;
 import io.a2a.spec.AgentSkill;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springaicommunity.a2a.server.executor.DefaultA2AChatClientAgentExecutor;
+import org.springaicommunity.a2a.server.executor.DefaultAgentExecutor;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.tool.ToolCallbackProvider;
@@ -81,8 +81,8 @@ public class AirbnbPlannerApplication {
 			.defaultToolCallbacks(toolCallbackProvider)
 			.build();
 
-		return new DefaultA2AChatClientAgentExecutor(chatClient, (chat, requestContext) -> {
-			String userMessage = DefaultA2AChatClientAgentExecutor.extractTextFromMessage(requestContext.getMessage());
+		return new DefaultAgentExecutor(chatClient, (chat, requestContext) -> {
+			String userMessage = DefaultAgentExecutor.extractTextFromMessage(requestContext.getMessage());
 			return chat.prompt().user(userMessage).call().content();
 		});
 	}

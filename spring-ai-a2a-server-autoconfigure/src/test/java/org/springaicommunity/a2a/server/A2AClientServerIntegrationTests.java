@@ -21,7 +21,7 @@ import java.util.List;
 import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.spec.AgentCard;
 import org.junit.jupiter.api.Test;
-import org.springaicommunity.a2a.server.executor.DefaultA2AChatClientAgentExecutor;
+import org.springaicommunity.a2a.server.executor.DefaultAgentExecutor;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
@@ -92,8 +92,8 @@ class A2AClientServerIntegrationTests {
 		 */
 		@Bean
 		public AgentExecutor testAgentExecutor(ChatClient testChatClient) {
-			return new DefaultA2AChatClientAgentExecutor(testChatClient, (chatClient, requestContext) -> {
-				return DefaultA2AChatClientAgentExecutor.extractTextFromMessage(requestContext.getMessage());
+			return new DefaultAgentExecutor(testChatClient, (chatClient, requestContext) -> {
+				return DefaultAgentExecutor.extractTextFromMessage(requestContext.getMessage());
 			}) {
 			};
 		}
