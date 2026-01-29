@@ -20,7 +20,7 @@ Spring AI A2A provides **server-side** support for exposing Spring AI agents via
 <dependency>
     <groupId>org.springaicommunity</groupId>
     <artifactId>spring-ai-a2a-server-autoconfigure</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.2.0</version>
 </dependency>
 
 <dependency>
