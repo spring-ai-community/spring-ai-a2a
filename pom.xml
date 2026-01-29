@@ -6,7 +6,7 @@
 
 	<groupId>org.springaicommunity</groupId>
 	<artifactId>spring-ai-a2a-parent</artifactId>
-	<version>0.2.0</version>
+	<version>0.2.1-SNAPSHOT</version>
 	<packaging>pom</packaging>
 
 	<name>Spring AI A2A</name>
