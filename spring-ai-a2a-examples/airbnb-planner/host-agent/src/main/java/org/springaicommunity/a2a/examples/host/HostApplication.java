@@ -28,7 +28,7 @@ public class HostApplication {
 			* **Tool Reliance:** Strictly rely on available tools to address user requests. Do not generate responses based on assumptions. If information is insufficient, request clarification from the user.
 			* **Prioritize Recent Interaction:** Focus primarily on the most recent parts of the conversation when processing requests.
 
-			**Agent Roster:**
+			**Agent Router:**
 
 			Available Agents:
 			%s

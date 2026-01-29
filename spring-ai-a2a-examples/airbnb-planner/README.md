@@ -5,8 +5,8 @@ A multi-agent travel planning demo using the Spring AI A2A framework, based on t
 ## Architecture
 
 ```
-User → Host Agent (10000/host) → Airbnb Agent (10001/foo) → MCP Airbnb Server
-                               → Weather Agent (10002/bar) → Open-Meteo API
+User → Host Agent (10000/host) → Airbnb Agent (10001/airbnb) → MCP Airbnb Server
+                               → Weather Agent (10002/weather) → Open-Meteo API
 ```
 
 The Host Agent is an orchestrator that routes user requests to specialized agents:
@@ -14,8 +14,8 @@ The Host Agent is an orchestrator that routes user requests to specialized agent
 | Agent | Port | Context Path | Description |
 |-------|------|--------------|-------------|
 | `host-agent` | 10000 | `/host` | Orchestrator that routes requests to remote agents |
-| `airbnb-agent` | 10001 | `/foo` | Accommodation search via MCP Airbnb server |
-| `weather-agent` | 10002 | `/bar` | Weather forecasts via Open-Meteo API |
+| `airbnb-agent` | 10001 | `/airbnb` | Accommodation search via MCP Airbnb server |
+| `weather-agent` | 10002 | `/weather` | Weather forecasts via Open-Meteo API |
 
 ## Prerequisites
 
@@ -64,13 +64,10 @@ Check each agent's card endpoint:
 
 ```bash
 # Weather Agent
-curl http://localhost:10002/bar/card | jq
+curl http://localhost:10002/weather/card | jq
 
 # Airbnb Agent
-curl http://localhost:10001/foo/card | jq
-
-# Host Agent (also discovers remote agents at startup)
-curl http://localhost:10000/host/card | jq
+curl http://localhost:10001/airbnb/card | jq
 ```
 
 ### 4. Send requests
