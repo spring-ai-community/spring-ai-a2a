@@ -6,7 +6,7 @@
 [![Maven Central](https://img.shields.io/maven-central/v/org.springaicommunity/spring-ai-a2a-server-autoconfigure.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/org.springaicommunity/spring-ai-a2a-server-autoconfigure)
 [![Java Version](https://img.shields.io/badge/Java-17%2B-orange)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
 
-Spring Boot integration for building AI agent servers using the [A2A Protocol](https://a2a.anthropic.com/).
+Spring Boot integration for building AI agent servers using the [A2A Protocol](https://a2a-protocol.org/).
 
 ## Overview
 
