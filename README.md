@@ -133,15 +133,21 @@ client.sendMessage(new Message.Builder().role(Message.Role.USER)
 Your Spring Boot App
 ├── ChatClient, AgentCard, AgentExecutor (your beans)
 ├── DefaultAgentExecutor (bridges A2A ↔ ChatClient)
-└── A2A Controllers (auto-configured)
-    ├── POST /      → MessageController (sendMessage)
-    ├── GET  /card  → AgentCardController (discovery)
-    └── GET  /tasks/{id} → TaskController (status)
+└── A2A Functional Routes (auto-configured, servlet or reactive)
+    ├── POST /      → sendMessage (JSON-RPC)
+    ├── GET  /card  → agent card (discovery)
+    └── GET  /tasks/{id} → task status
 ```
 
+The A2A endpoints are functional routes (`RouterFunction`) backed by a shared,
+web-stack agnostic `A2ARequestProcessor`. The auto-configuration registers the
+WebMvc.fn variant on a servlet stack (`spring-boot-starter-web` / Tomcat) and the
+WebFlux.fn variant on a reactive stack (`spring-boot-starter-webflux` / Netty) —
+same behavior on both runtimes.
+
 **Request Flow:**
-1. `MessageController` receives JSON-RPC request
-2. A2A SDK `RequestHandler` creates task
+1. The A2A route receives the JSON-RPC request and hands it to `A2ARequestProcessor`
+2. A2A SDK `RequestHandler` creates task (off the event loop, on a bounded-elastic scheduler)
 3. `DefaultAgentExecutor` invokes your `ChatClientExecutorHandler`
 4. `ChatClient` calls LLM and executes tools
 5. Response wrapped as task artifact → returned to client
