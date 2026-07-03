@@ -71,10 +71,17 @@
 			<scope>test</scope>
 		</dependency>
 
-		<!-- Spring Boot Web Starter (needed for embedded server in tests) -->
+		<!-- Spring Boot Web Starter (needed for embedded servlet server in tests) -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Spring Boot WebFlux Starter (needed for embedded reactive server in tests) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webflux</artifactId>
 			<scope>test</scope>
 		</dependency>
 

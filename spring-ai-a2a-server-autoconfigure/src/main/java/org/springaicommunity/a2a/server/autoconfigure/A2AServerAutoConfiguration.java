@@ -38,10 +38,10 @@ import io.a2a.spec.AgentCard;
 import io.a2a.spec.Task;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springaicommunity.a2a.server.controller.AgentCardController;
-import org.springaicommunity.a2a.server.controller.MessageController;
-import org.springaicommunity.a2a.server.controller.TaskController;
+import org.springaicommunity.a2a.server.core.A2ARequestProcessor;
 import org.springaicommunity.a2a.server.executor.DefaultAgentExecutor;
+import org.springaicommunity.a2a.server.web.reactive.A2AReactiveRoutes;
+import org.springaicommunity.a2a.server.web.servlet.A2AServletRoutes;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,8 +50,10 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 
 /**
@@ -82,22 +84,47 @@ public class A2AServerAutoConfiguration {
 		logger.info("Using AgentCard: {} (version: {})", agentCard.name(), agentCard.version());
 	}
 
+	/**
+	 * Provide the shared, web-stack agnostic A2A request processor.
+	 */
 	@Bean
 	@ConditionalOnMissingBean
-	AgentCardController agentCardController(AgentCard agentCard) {
-		return new AgentCardController(agentCard);
+	public A2ARequestProcessor a2aRequestProcessor(RequestHandler requestHandler) {
+		return new A2ARequestProcessor(requestHandler);
 	}
 
-	@Bean
-	@ConditionalOnMissingBean
-	MessageController messageController(RequestHandler requestHandler) {
-		return new MessageController(requestHandler);
+	/**
+	 * Registers the A2A functional routes on a servlet web stack (WebMvc.fn).
+	 */
+	@Configuration(proxyBeanMethods = false)
+	@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+	static class A2AServletRoutesConfiguration {
+
+		@Bean
+		@ConditionalOnMissingBean(name = "a2aServletRouterFunction")
+		org.springframework.web.servlet.function.RouterFunction<org.springframework.web.servlet.function.ServerResponse> a2aServletRouterFunction(
+				A2ARequestProcessor a2aRequestProcessor, AgentCard agentCard) {
+			logger.info("Registering A2A servlet (WebMvc.fn) routes");
+			return A2AServletRoutes.routes(a2aRequestProcessor, agentCard);
+		}
+
 	}
 
-	@Bean
-	@ConditionalOnMissingBean
-	TaskController taskController(RequestHandler requestHandler) {
-		return new TaskController(requestHandler);
+	/**
+	 * Registers the A2A functional routes on a reactive web stack (WebFlux.fn).
+	 */
+	@Configuration(proxyBeanMethods = false)
+	@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
+	static class A2AReactiveRoutesConfiguration {
+
+		@Bean
+		@ConditionalOnMissingBean(name = "a2aReactiveRouterFunction")
+		org.springframework.web.reactive.function.server.RouterFunction<org.springframework.web.reactive.function.server.ServerResponse> a2aReactiveRouterFunction(
+				A2ARequestProcessor a2aRequestProcessor, AgentCard agentCard) {
+			logger.info("Registering A2A reactive (WebFlux.fn) routes");
+			return A2AReactiveRoutes.routes(a2aRequestProcessor, agentCard);
+		}
+
 	}
 
 	/**
