@@ -59,7 +59,7 @@ public class AirbnbPlannerApplication {
 			.description("Helps with searching accommodation")
 			.url("http://localhost:" + port + contextPath + "/")
 			.version("1.0.0")
-			.capabilities(new AgentCapabilities.Builder().streaming(false).pushNotifications(true).build())
+			.capabilities(new AgentCapabilities.Builder().streaming(true).pushNotifications(true).build())
 			.defaultInputModes(List.of("text", "text/plain"))
 			.defaultOutputModes(List.of("text", "text/plain"))
 			.skills(List.of(new AgentSkill.Builder().id("airbnb_search")
