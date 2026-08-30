@@ -43,7 +43,7 @@ public class WeatherAgentApplication {
 			.description("Helps with weather")
 			.url("http://localhost:" + port + contextPath + "/")
 			.version("1.0.0")
-			.capabilities(new AgentCapabilities.Builder().streaming(false).build())
+			.capabilities(new AgentCapabilities.Builder().streaming(true).build())
 			.defaultInputModes(List.of("text"))
 			.defaultOutputModes(List.of("text"))
 			.skills(List.of(new AgentSkill.Builder().id("weather_search")

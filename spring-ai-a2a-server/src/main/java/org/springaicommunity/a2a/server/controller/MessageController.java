@@ -20,12 +20,17 @@ import io.a2a.server.ServerCallContext;
 import io.a2a.server.requesthandlers.RequestHandler;
 import io.a2a.spec.EventKind;
 import io.a2a.spec.JSONRPCError;
+import io.a2a.spec.SendStreamingMessageRequest;
+import io.a2a.spec.SendStreamingMessageResponse;
 import io.a2a.spec.MessageSendParams;
 import io.a2a.spec.SendMessageRequest;
 import io.a2a.spec.SendMessageResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.adapter.JdkFlowAdapter;
+import reactor.core.publisher.Flux;
 import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -81,6 +86,40 @@ public class MessageController {
 		}
 		catch (Exception e) {
 			logger.error("Unexpected error processing message - id: {}", request.getId(), e);
+			throw new JSONRPCError(-32603, "Internal error: " + e.getMessage(), null);
+		}
+	}
+
+	/**
+	 * Handles streaming message requests.
+	 * @param request JSON-RPC message request for {@code message/stream}
+	 * @return SSE stream of JSON-RPC envelope-wrapped streaming events
+	 */
+	@PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+	public Flux<ServerSentEvent<SendStreamingMessageResponse>> sendMessageStream(
+			@RequestBody SendStreamingMessageRequest request) throws JSONRPCError {
+		if (!SendStreamingMessageRequest.METHOD.equals(request.getMethod())) {
+			throw new JSONRPCError(-32601, "Method not found: " + request.getMethod(), null);
+		}
+
+		MessageSendParams params = request.getParams();
+		logger.debug("Received streaming sendMessage request - id: {}", request.getId());
+
+		try {
+			ServerCallContext context = new ServerCallContext(null, Map.of(), Set.of());
+
+			// Bridge Flow.Publisher to Reactor Flux and wrap each event in the JSON-RPC
+			// streaming response envelope.
+			return JdkFlowAdapter.flowPublisherToFlux(this.requestHandler.onMessageSendStream(params, context))
+				.map(event -> new SendStreamingMessageResponse(request.getId(), event))
+				.map(event -> ServerSentEvent.<SendStreamingMessageResponse>builder().data(event).build());
+		}
+		catch (JSONRPCError e) {
+			logger.error("Error processing streaming message - id: {}", request.getId(), e);
+			throw e;
+		}
+		catch (Exception e) {
+			logger.error("Unexpected error processing streaming message - id: {}", request.getId(), e);
 			throw new JSONRPCError(-32603, "Internal error: " + e.getMessage(), null);
 		}
 	}
