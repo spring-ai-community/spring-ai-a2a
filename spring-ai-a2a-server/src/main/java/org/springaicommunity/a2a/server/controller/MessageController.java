@@ -92,13 +92,12 @@ public class MessageController {
 
 	/**
 	 * Handles streaming message requests.
-	 *
 	 * @param request JSON-RPC message request for {@code message/stream}
 	 * @return SSE stream of JSON-RPC envelope-wrapped streaming events
 	 */
 	@PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-	public Flux<ServerSentEvent<SendStreamingMessageResponse>> sendMessageStream(@RequestBody SendStreamingMessageRequest request)
-			throws JSONRPCError {
+	public Flux<ServerSentEvent<SendStreamingMessageResponse>> sendMessageStream(
+			@RequestBody SendStreamingMessageRequest request) throws JSONRPCError {
 		if (!SendStreamingMessageRequest.METHOD.equals(request.getMethod())) {
 			throw new JSONRPCError(-32601, "Method not found: " + request.getMethod(), null);
 		}
