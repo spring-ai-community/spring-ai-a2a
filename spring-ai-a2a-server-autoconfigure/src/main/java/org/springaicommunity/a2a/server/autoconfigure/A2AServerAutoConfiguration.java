@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.a2aproject.sdk.server.agentexecution.AgentExecutor;
+import org.a2aproject.sdk.server.auth.TaskAuthorizationProvider;
 import org.a2aproject.sdk.server.config.DefaultValuesConfigProvider;
 import org.a2aproject.sdk.server.events.InMemoryQueueManager;
 import org.a2aproject.sdk.server.events.MainEventBus;
@@ -39,6 +40,7 @@ import org.a2aproject.sdk.server.tasks.TaskStore;
 import org.a2aproject.sdk.spec.AgentCard;
 import org.a2aproject.sdk.spec.StreamingEventKind;
 import org.a2aproject.sdk.spec.Task;
+import org.a2aproject.sdk.transport.jsonrpc.handler.JSONRPCHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.a2a.server.controller.AgentCardController;
@@ -47,6 +49,7 @@ import org.springaicommunity.a2a.server.controller.TaskController;
 import org.springaicommunity.a2a.server.executor.DefaultAgentExecutor;
 
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -91,10 +94,21 @@ public class A2AServerAutoConfiguration {
 		return new AgentCardController(agentCard);
 	}
 
+	/**
+	 * Provide the SDK's JSON-RPC handler that dispatches the JSON-RPC requests to the
+	 * {@link RequestHandler}.
+	 */
 	@Bean
 	@ConditionalOnMissingBean
-	MessageController messageController(RequestHandler requestHandler) {
-		return new MessageController(requestHandler);
+	public JSONRPCHandler jsonRpcHandler(AgentCard agentCard, RequestHandler requestHandler,
+			@Qualifier("a2aInternal") Executor executor) {
+		return new JSONRPCHandler(agentCard, requestHandler, executor);
+	}
+
+	@Bean
+	@ConditionalOnMissingBean
+	MessageController messageController(RequestHandler requestHandler, JSONRPCHandler jsonRpcHandler) {
+		return new MessageController(requestHandler, jsonRpcHandler);
 	}
 
 	@Bean
@@ -232,9 +246,15 @@ public class A2AServerAutoConfiguration {
 	@ConditionalOnMissingBean
 	public RequestHandler requestHandler(AgentExecutor agentExecutor, TaskStore taskStore, QueueManager queueManager,
 			PushNotificationConfigStore pushConfigStore, MainEventBusProcessor mainEventBusProcessor,
-			@Qualifier("a2aInternal") Executor executor) {
+			@Qualifier("a2aInternal") Executor executor, SpringA2AConfigProvider configProvider,
+			ObjectProvider<TaskAuthorizationProvider> authorizationProvider) {
 
 		logger.info("Creating DefaultRequestHandler with A2A SDK 1.4.0 components");
+
+		// The builder doesn't read the SDK configuration. Without a
+		// TaskAuthorizationProvider, the SDK denies all task operations unless
+		// a2a.authorization.required is set to false.
+		boolean authorizationRequired = Boolean.parseBoolean(configProvider.getValue("a2a.authorization.required"));
 
 		return DefaultRequestHandler.builder()
 			.agentExecutor(agentExecutor)
@@ -244,6 +264,8 @@ public class A2AServerAutoConfiguration {
 			.mainEventBusProcessor(mainEventBusProcessor)
 			.executor(executor)
 			.eventConsumerExecutor(executor)
+			.authorizationProvider(authorizationProvider.getIfAvailable())
+			.authorizationRequired(authorizationRequired)
 			.build();
 	}
 

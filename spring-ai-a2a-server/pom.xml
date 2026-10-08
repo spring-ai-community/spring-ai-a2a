@@ -46,6 +46,11 @@
 			<groupId>org.a2aproject.sdk</groupId>
 			<artifactId>a2a-java-sdk-server-common</artifactId>
 		</dependency>
+		<!-- JSON-RPC transport: parses requests and serializes responses in the A2A wire format -->
+		<dependency>
+			<groupId>org.a2aproject.sdk</groupId>
+			<artifactId>a2a-java-sdk-transport-jsonrpc</artifactId>
+		</dependency>
 
 		<!-- Spring Web MVC -->
 		<dependency>

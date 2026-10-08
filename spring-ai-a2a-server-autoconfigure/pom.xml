@@ -78,6 +78,18 @@
 			<scope>test</scope>
 		</dependency>
 
+		<!-- A2A Java SDK client for client/server round-trip tests -->
+		<dependency>
+			<groupId>org.a2aproject.sdk</groupId>
+			<artifactId>a2a-java-sdk-client</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.a2aproject.sdk</groupId>
+			<artifactId>a2a-java-sdk-client-transport-jsonrpc</artifactId>
+			<scope>test</scope>
+		</dependency>
+
 		<!-- Spring AI OpenAI for testing -->
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
