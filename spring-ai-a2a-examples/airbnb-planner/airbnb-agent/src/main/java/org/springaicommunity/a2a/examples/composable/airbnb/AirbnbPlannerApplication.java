@@ -6,6 +6,7 @@ import java.util.stream.Stream;
 import org.a2aproject.sdk.server.agentexecution.AgentExecutor;
 import org.a2aproject.sdk.spec.AgentCapabilities;
 import org.a2aproject.sdk.spec.AgentCard;
+import org.a2aproject.sdk.spec.AgentInterface;
 import org.a2aproject.sdk.spec.AgentSkill;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,7 +59,7 @@ public class AirbnbPlannerApplication {
 		return AgentCard.builder()
 			.name("Airbnb Agent")
 			.description("Helps with searching accommodation")
-			.url("http://localhost:" + port + contextPath + "/")
+			.supportedInterfaces(List.of(new AgentInterface("JSONRPC", "http://localhost:" + port + contextPath + "/")))
 			.version("1.0.0")
 			.capabilities(AgentCapabilities.builder().streaming(false).pushNotifications(true).build())
 			.defaultInputModes(List.of("text", "text/plain"))

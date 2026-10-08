@@ -15,7 +15,6 @@
  */
 package org.springaicommunity.a2a.examples.host;
 
-import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,9 +62,7 @@ public class RemoteAgentConnections {
 			try {
 				logger.info("Resolving agent card from: {}", url);
 
-				String path = new URI(url).getPath();
-
-				AgentCard card = A2A.getAgentCard(url, path + ".well-known/agent-card.json", null);
+				AgentCard card = A2A.getAgentCard(url);
 
 				this.cards.put(card.name(), card);
 

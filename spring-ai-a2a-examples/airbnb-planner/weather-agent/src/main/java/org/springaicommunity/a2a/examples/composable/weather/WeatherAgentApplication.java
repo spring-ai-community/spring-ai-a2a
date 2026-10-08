@@ -5,6 +5,7 @@ import java.util.List;
 import org.a2aproject.sdk.server.agentexecution.AgentExecutor;
 import org.a2aproject.sdk.spec.AgentCapabilities;
 import org.a2aproject.sdk.spec.AgentCard;
+import org.a2aproject.sdk.spec.AgentInterface;
 import org.a2aproject.sdk.spec.AgentSkill;
 import org.springaicommunity.a2a.server.executor.DefaultAgentExecutor;
 
@@ -42,7 +43,7 @@ public class WeatherAgentApplication {
 		return AgentCard.builder()
 			.name("Weather Agent")
 			.description("Helps with weather")
-			.url("http://localhost:" + port + contextPath + "/")
+			.supportedInterfaces(List.of(new AgentInterface("JSONRPC", "http://localhost:" + port + contextPath + "/")))
 			.version("1.0.0")
 			.capabilities(AgentCapabilities.builder().streaming(false).build())
 			.defaultInputModes(List.of("text"))
