@@ -16,12 +16,20 @@
 
 package org.springaicommunity.a2a.server.autoconfigure;
 
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.a2aproject.sdk.compat03.conversion.Convert_v0_3_To10RequestHandler;
+import org.a2aproject.sdk.compat03.spec.AgentCapabilities_v0_3;
+import org.a2aproject.sdk.compat03.spec.AgentCard_v0_3;
+import org.a2aproject.sdk.compat03.spec.AgentSkill_v0_3;
+import org.a2aproject.sdk.compat03.spec.TransportProtocol_v0_3;
+import org.a2aproject.sdk.compat03.transport.jsonrpc.handler.JSONRPCHandler_v0_3;
 import org.a2aproject.sdk.server.agentexecution.AgentExecutor;
 import org.a2aproject.sdk.server.auth.TaskAuthorizationProvider;
 import org.a2aproject.sdk.server.config.DefaultValuesConfigProvider;
@@ -69,6 +77,7 @@ import org.springframework.core.env.Environment;
  *
  * @author Ilayaperumal Gopinathan
  * @author Christian Tzolov
+ * @author Thorben Janssen
  * @since 0.1.0
  */
 @AutoConfiguration
@@ -105,10 +114,52 @@ public class A2AServerAutoConfiguration {
 		return new JSONRPCHandler(agentCard, requestHandler, executor);
 	}
 
+	/**
+	 * Provide the SDK's JSON-RPC handler for A2A v0.3 requests. It converts the requests
+	 * to v1.0, dispatches them to the {@link RequestHandler} and converts the results
+	 * back to v0.3.
+	 */
 	@Bean
 	@ConditionalOnMissingBean
-	MessageController messageController(RequestHandler requestHandler, JSONRPCHandler jsonRpcHandler) {
-		return new MessageController(requestHandler, jsonRpcHandler);
+	public JSONRPCHandler_v0_3 jsonRpcHandlerV03(AgentCard agentCard, RequestHandler requestHandler,
+			@Qualifier("a2aInternal") Executor executor) {
+		return new JSONRPCHandler_v0_3(toV03AgentCard(agentCard), executor,
+				new Convert_v0_3_To10RequestHandler(requestHandler));
+	}
+
+	@Bean
+	@ConditionalOnMissingBean
+	MessageController messageController(JSONRPCHandler jsonRpcHandler, JSONRPCHandler_v0_3 jsonRpcHandlerV03) {
+		return new MessageController(jsonRpcHandler, jsonRpcHandlerV03);
+	}
+
+	/**
+	 * Converts the agent card to v0.3. The {@link JSONRPCHandler_v0_3} uses it to check
+	 * the agent's capabilities. An authenticated extended card isn't supported for v0.3
+	 * requests.
+	 */
+	static AgentCard_v0_3 toV03AgentCard(AgentCard agentCard) {
+		List<AgentSkill_v0_3> skills = agentCard.skills()
+			.stream()
+			.map(skill -> new AgentSkill_v0_3(skill.id(), skill.name(), skill.description(), skill.tags(),
+					skill.examples(), skill.inputModes(), skill.outputModes(), null))
+			.toList();
+
+		return new AgentCard_v0_3.Builder().name(agentCard.name())
+			.description(agentCard.description())
+			.url(Objects.requireNonNullElse(AgentCardController.jsonRpcUrl(agentCard), ""))
+			.version(agentCard.version())
+			.documentationUrl(agentCard.documentationUrl())
+			.capabilities(new AgentCapabilities_v0_3.Builder().streaming(agentCard.capabilities().streaming())
+				.pushNotifications(agentCard.capabilities().pushNotifications())
+				.build())
+			.defaultInputModes(agentCard.defaultInputModes())
+			.defaultOutputModes(agentCard.defaultOutputModes())
+			.skills(skills)
+			.supportsAuthenticatedExtendedCard(false)
+			.iconUrl(agentCard.iconUrl())
+			.preferredTransport(TransportProtocol_v0_3.JSONRPC.asString())
+			.build();
 	}
 
 	@Bean
