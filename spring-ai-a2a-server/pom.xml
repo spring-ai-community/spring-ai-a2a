@@ -51,6 +51,11 @@
 			<groupId>org.a2aproject.sdk</groupId>
 			<artifactId>a2a-java-sdk-transport-jsonrpc</artifactId>
 		</dependency>
+		<!-- A2A v0.3 JSON-RPC transport: handles requests of A2A v0.3 clients -->
+		<dependency>
+			<groupId>org.a2aproject.sdk</groupId>
+			<artifactId>a2a-java-sdk-compat-0.3-transport-jsonrpc</artifactId>
+		</dependency>
 
 		<!-- Spring Web MVC -->
 		<dependency>
@@ -100,6 +105,13 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-configuration-processor</artifactId>
 			<optional>true</optional>
+		</dependency>
+
+		<!-- Testing -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 
