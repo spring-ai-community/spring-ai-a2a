@@ -16,6 +16,10 @@
 	<name>Spring AI A2A Examples</name>
 	<description>Examples demonstrating Spring AI A2A usage</description>
 
+	<properties>
+		<maven.deploy.skip>true</maven.deploy.skip>
+	</properties>
+
 	<modules>
 		<module>airbnb-planner/airbnb-agent</module>
 		<module>airbnb-planner/weather-agent</module>
