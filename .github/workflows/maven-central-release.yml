@@ -27,11 +27,11 @@ jobs:
           node-version: '20'
           
       - name: Build and Test
-        run: mvn clean verify
+        run: ./mvnw clean verify
 
       - name: Publish to Maven Central
         run: |
-          mvn --batch-mode \
+          ./mvnw --batch-mode \
             -Prelease \
             -Pjavadoc \
             deploy
